@@ -11,6 +11,11 @@ dependencies:
     sdk: flutter
   go_router: ^14.0.0
   shared_preferences: ^2.2.2
+  sqflite: ^2.3.0
+  supabase_flutter: ^2.5.0
+  uuid: ^4.3.3
+  connectivity_plus: ^6.0.3
+  path: ^1.9.0
 
 dev_dependencies:
   flutter_test:

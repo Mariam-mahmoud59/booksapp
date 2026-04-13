@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
-
-const _mockPages = [
-  'Once upon a time, in a small village nestled between rolling hills, there was a garden that nobody knew about. It was hidden behind an old stone wall, covered in ivy and forgotten by time...',
-  'One day, a curious young girl named Luna discovered a small gap in the wall. Intrigued, she squeezed through and found herself in the most beautiful garden she had ever seen.',
-  'Flowers of every color bloomed in wild abundance. Ancient trees stretched their branches toward the sky, creating a canopy of dappled light. In the center, a crystal-clear fountain bubbled softly.',
-];
+import '../models/story.dart';
+import '../repositories/story_repository.dart';
 
 class ReadingModeScreen extends StatefulWidget {
   final String storyId;
@@ -18,8 +14,17 @@ class ReadingModeScreen extends StatefulWidget {
 }
 
 class _ReadingModeScreenState extends State<ReadingModeScreen> {
+  final StoryRepository _repo = StoryRepository();
   int _currentPage = 0;
   final _pageController = PageController();
+  List<StoryPage> _pages = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPages();
+  }
 
   @override
   void dispose() {
@@ -27,8 +32,18 @@ class _ReadingModeScreenState extends State<ReadingModeScreen> {
     super.dispose();
   }
 
+  Future<void> _loadPages() async {
+    final pages = await _repo.getStoryPages(widget.storyId);
+    if (mounted) {
+      setState(() {
+        _pages = pages;
+        _isLoading = false;
+      });
+    }
+  }
+
   void _nextPage() {
-    if (_currentPage < _mockPages.length - 1) {
+    if (_currentPage < _pages.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -47,6 +62,38 @@ class _ReadingModeScreenState extends State<ReadingModeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation(AppColors.accent),
+          ),
+        ),
+      );
+    }
+
+    if (_pages.isEmpty) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('No pages to display',
+                  style: TextStyle(color: AppColors.mutedForeground)),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () =>
+                    context.go('/app/story/${widget.storyId}'),
+                child: const Text('Go Back'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -60,7 +107,8 @@ class _ReadingModeScreenState extends State<ReadingModeScreen> {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 child: Row(
                   children: [
                     IconButton(
@@ -71,7 +119,7 @@ class _ReadingModeScreenState extends State<ReadingModeScreen> {
                     ),
                     const Spacer(),
                     Text(
-                      'Page ${_currentPage + 1} of ${_mockPages.length}',
+                      'Page ${_currentPage + 1} of ${_pages.length}',
                       style: const TextStyle(
                         fontSize: 14,
                         color: AppColors.mutedForeground,
@@ -85,21 +133,47 @@ class _ReadingModeScreenState extends State<ReadingModeScreen> {
               Expanded(
                 child: PageView.builder(
                   controller: _pageController,
-                  onPageChanged: (i) => setState(() => _currentPage = i),
-                  itemCount: _mockPages.length,
+                  onPageChanged: (i) =>
+                      setState(() => _currentPage = i),
+                  itemCount: _pages.length,
                   itemBuilder: (context, index) {
+                    final page = _pages[index];
                     return Center(
-                      child: Padding(
+                      child: SingleChildScrollView(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 32, vertical: 24),
-                        child: Text(
-                          _mockPages[index],
-                          style: const TextStyle(
-                            fontSize: 20,
-                            color: AppColors.foreground,
-                            height: 1.7,
-                          ),
-                          textAlign: TextAlign.left,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (page.title != null &&
+                                page.title!.isNotEmpty) ...[
+                              Text(
+                                page.title!,
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  color: AppColors.foreground,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                            Text(
+                              page.content.isEmpty
+                                  ? '(Empty page)'
+                                  : page.content,
+                              style: TextStyle(
+                                fontSize: 20,
+                                color: page.content.isEmpty
+                                    ? AppColors.mutedForeground
+                                    : AppColors.foreground,
+                                height: 1.7,
+                                fontStyle: page.content.isEmpty
+                                    ? FontStyle.italic
+                                    : FontStyle.normal,
+                              ),
+                              textAlign: TextAlign.left,
+                            ),
+                          ],
                         ),
                       ),
                     );
@@ -133,11 +207,12 @@ class _ReadingModeScreenState extends State<ReadingModeScreen> {
                       ),
                     ),
                     Row(
-                      children: List.generate(_mockPages.length, (i) {
+                      children: List.generate(_pages.length, (i) {
                         return Container(
                           width: 8,
                           height: 8,
-                          margin: const EdgeInsets.symmetric(horizontal: 3),
+                          margin:
+                              const EdgeInsets.symmetric(horizontal: 3),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: i == _currentPage
@@ -153,7 +228,7 @@ class _ReadingModeScreenState extends State<ReadingModeScreen> {
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: _currentPage < _mockPages.length - 1
+                          color: _currentPage < _pages.length - 1
                               ? AppColors.accent
                               : AppColors.secondary.withOpacity(0.3),
                           borderRadius: BorderRadius.circular(12),
@@ -161,7 +236,7 @@ class _ReadingModeScreenState extends State<ReadingModeScreen> {
                         child: Icon(
                           Icons.chevron_right,
                           size: 24,
-                          color: _currentPage < _mockPages.length - 1
+                          color: _currentPage < _pages.length - 1
                               ? Colors.white
                               : AppColors.mutedForeground,
                         ),

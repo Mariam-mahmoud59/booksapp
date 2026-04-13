@@ -2,18 +2,84 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
 import '../models/story.dart';
+import '../repositories/story_repository.dart';
 
-class StoryDetailsScreen extends StatelessWidget {
+class StoryDetailsScreen extends StatefulWidget {
   final String storyId;
 
   const StoryDetailsScreen({super.key, required this.storyId});
 
   @override
+  State<StoryDetailsScreen> createState() => _StoryDetailsScreenState();
+}
+
+class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
+  final StoryRepository _repo = StoryRepository();
+  Story? _story;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStory();
+  }
+
+  Future<void> _loadStory() async {
+    final story = await _repo.getStory(widget.storyId);
+    if (mounted) {
+      setState(() {
+        _story = story;
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (_story == null) return;
+    final newState = await _repo.toggleFavorite(_story!.id);
+    setState(() {
+      _story = _story!.copyWith(isFavorite: newState);
+    });
+  }
+
+  Future<void> _deleteStory() async {
+    await _repo.deleteStory(widget.storyId);
+    if (mounted) context.go('/app');
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final story = mockStories.firstWhere(
-      (s) => s.id == storyId,
-      orElse: () => mockStories.first,
-    );
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation(AppColors.accent),
+          ),
+        ),
+      );
+    }
+
+    final story = _story;
+    if (story == null) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('Story not found',
+                  style: TextStyle(color: AppColors.mutedForeground)),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () => context.go('/app'),
+                child: const Text('Go Home'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -54,6 +120,28 @@ class StoryDetailsScreen extends StatelessWidget {
                     ),
                   ),
                 ),
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + 16,
+                  right: 16,
+                  child: GestureDetector(
+                    onTap: _toggleFavorite,
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        story.isFavorite
+                            ? Icons.favorite
+                            : Icons.favorite_border,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
             Padding(
@@ -61,49 +149,91 @@ class StoryDetailsScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    story.title,
-                    style: const TextStyle(
-                      fontSize: 28,
-                      color: AppColors.foreground,
-                      fontWeight: FontWeight.w400,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          story.title,
+                          style: const TextStyle(
+                            fontSize: 28,
+                            color: AppColors.foreground,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ),
+                      if (!story.isSynced)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.accent.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.cloud_off,
+                                  size: 14, color: AppColors.accent),
+                              SizedBox(width: 4),
+                              Text('Offline',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.accent)),
+                            ],
+                          ),
+                        ),
+                    ],
                   ),
+                  if (story.description != null &&
+                      story.description!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      story.description!,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppColors.mutedForeground,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   Row(
                     children: [
                       _StatItem(
-                        value: '${story.pages}',
+                        value: '${story.pageCount}',
                         label: 'Pages',
                       ),
                       _StatItem(
-                        value: '${story.wordCount ?? 0}',
-                        label: 'Words',
+                        value: story.status,
+                        label: 'Status',
                       ),
-                      _StatItem(
-                        value: '${story.progress}%',
-                        label: 'Complete',
-                      ),
+                      if (story.genre != null)
+                        _StatItem(
+                          value: story.genre!,
+                          label: 'Genre',
+                        ),
                     ],
                   ),
                   const SizedBox(height: 24),
                   _InfoRow(
                     icon: Icons.access_time,
-                    text: 'Last edited ${story.lastEdited}',
+                    text: 'Last edited ${story.lastEditedDisplay}',
                   ),
                   const SizedBox(height: 8),
-                  if (story.created != null)
-                    _InfoRow(
-                      icon: Icons.calendar_today_outlined,
-                      text: 'Created ${story.created}',
-                    ),
+                  _InfoRow(
+                    icon: Icons.calendar_today_outlined,
+                    text:
+                        'Created ${story.createdAt.month}/${story.createdAt.day}/${story.createdAt.year}',
+                  ),
                   const SizedBox(height: 32),
                   SizedBox(
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton.icon(
-                      onPressed: () =>
-                          context.go('/app/story/${story.id}/read'),
+                      onPressed: () async {
+                        await context
+                            .push('/app/story/${story.id}/read');
+                        _loadStory();
+                      },
                       icon: const Icon(Icons.menu_book_rounded, size: 20),
                       label: const Text('Read Story'),
                     ),
@@ -113,8 +243,11 @@ class StoryDetailsScreen extends StatelessWidget {
                     width: double.infinity,
                     height: 56,
                     child: OutlinedButton.icon(
-                      onPressed: () =>
-                          context.go('/app/story/${story.id}/edit'),
+                      onPressed: () async {
+                        await context
+                            .push('/app/story/${story.id}/edit');
+                        _loadStory();
+                      },
                       icon: const Icon(Icons.edit_outlined, size: 20),
                       label: const Text('Edit Story'),
                     ),
@@ -130,9 +263,13 @@ class StoryDetailsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   _ActionButton(
-                    icon: Icons.copy_outlined,
-                    label: 'Duplicate Story',
-                    onTap: () {},
+                    icon: story.isFavorite
+                        ? Icons.favorite
+                        : Icons.favorite_border,
+                    label: story.isFavorite
+                        ? 'Remove from Favorites'
+                        : 'Add to Favorites',
+                    onTap: _toggleFavorite,
                   ),
                   const SizedBox(height: 8),
                   _ActionButton(
@@ -160,7 +297,7 @@ class StoryDetailsScreen extends StatelessWidget {
                             TextButton(
                               onPressed: () {
                                 Navigator.pop(ctx);
-                                context.go('/app');
+                                _deleteStory();
                               },
                               style: TextButton.styleFrom(
                                 foregroundColor: const Color(0xFFD4183D),

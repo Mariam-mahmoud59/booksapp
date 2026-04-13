@@ -3,14 +3,43 @@ import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
 import '../models/story.dart';
 import '../widgets/story_cover.dart';
+import '../repositories/story_repository.dart';
 
-class FavoritesScreen extends StatelessWidget {
+class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final favorites = mockStories.where((s) => s.isFavorite).toList();
+  State<FavoritesScreen> createState() => _FavoritesScreenState();
+}
 
+class _FavoritesScreenState extends State<FavoritesScreen> {
+  final StoryRepository _repo = StoryRepository();
+  List<Story> _favorites = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFavorites();
+  }
+
+  Future<void> _loadFavorites() async {
+    final favorites = await _repo.getFavoriteStories();
+    if (mounted) {
+      setState(() {
+        _favorites = favorites;
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _toggleFavorite(String storyId) async {
+    await _repo.toggleFavorite(storyId);
+    _loadFavorites(); // Refresh the list
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -34,7 +63,15 @@ class FavoritesScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 24),
-              if (favorites.isEmpty)
+              if (_isLoading)
+                const Expanded(
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation(AppColors.accent),
+                    ),
+                  ),
+                )
+              else if (_favorites.isEmpty)
                 Expanded(
                   child: Center(
                     child: Column(
@@ -69,12 +106,15 @@ class FavoritesScreen extends StatelessWidget {
               else
                 Expanded(
                   child: ListView.separated(
-                    itemCount: favorites.length,
+                    itemCount: _favorites.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
-                      final story = favorites[index];
+                      final story = _favorites[index];
                       return GestureDetector(
-                        onTap: () => context.go('/app/story/${story.id}'),
+                        onTap: () async {
+                          await context.push('/app/story/${story.id}');
+                          _loadFavorites();
+                        },
                         child: Container(
                           decoration: BoxDecoration(
                             color: AppColors.card,
@@ -99,7 +139,7 @@ class FavoritesScreen extends StatelessWidget {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      '${story.pages} pages',
+                                      '${story.pageCount} pages',
                                       style: const TextStyle(
                                         fontSize: 14,
                                         color: AppColors.mutedForeground,
@@ -107,7 +147,7 @@ class FavoritesScreen extends StatelessWidget {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      story.lastEdited,
+                                      story.lastEditedDisplay,
                                       style: const TextStyle(
                                         fontSize: 12,
                                         color: AppColors.mutedForeground,
@@ -116,10 +156,13 @@ class FavoritesScreen extends StatelessWidget {
                                   ],
                                 ),
                               ),
-                              const Icon(
-                                Icons.favorite,
-                                color: AppColors.accent,
-                                size: 20,
+                              GestureDetector(
+                                onTap: () => _toggleFavorite(story.id),
+                                child: const Icon(
+                                  Icons.favorite,
+                                  color: AppColors.accent,
+                                  size: 20,
+                                ),
                               ),
                             ],
                           ),

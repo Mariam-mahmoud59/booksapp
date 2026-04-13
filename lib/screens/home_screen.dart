@@ -3,9 +3,35 @@ import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
 import '../models/story.dart';
 import '../widgets/story_cover.dart';
+import '../repositories/story_repository.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final StoryRepository _repo = StoryRepository();
+  List<Story> _recentStories = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStories();
+  }
+
+  Future<void> _loadStories() async {
+    final stories = await _repo.getAllStories();
+    if (mounted) {
+      setState(() {
+        _recentStories = stories.take(2).toList();
+        _isLoading = false;
+      });
+    }
+  }
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
@@ -16,8 +42,6 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final recentStories = mockStories.take(2).toList();
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -89,7 +113,8 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(height: 32),
           Row(
             children: const [
-              Icon(Icons.access_time, size: 20, color: AppColors.mutedForeground),
+              Icon(Icons.access_time,
+                  size: 20, color: AppColors.mutedForeground),
               SizedBox(width: 8),
               Text(
                 'Continue Writing',
@@ -101,67 +126,107 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          ...recentStories.asMap().entries.map((entry) {
-            final story = entry.value;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: GestureDetector(
-                onTap: () => context.go('/app/story/${story.id}'),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.card,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      StoryCover(colors: story.coverColors),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              story.title,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                color: AppColors.foreground,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${story.pages} pages',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: AppColors.mutedForeground,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              story.lastEdited,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: AppColors.mutedForeground,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Icon(
-                        Icons.chevron_right,
-                        color: AppColors.mutedForeground,
-                      ),
-                    ],
-                  ),
+          if (_isLoading)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation(AppColors.accent),
                 ),
               ),
-            );
-          }),
+            )
+          else if (_recentStories.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.secondary.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Text(
+                'No stories yet. Tap "Create New Story" to begin!',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.mutedForeground,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            )
+          else
+            ..._recentStories.map((story) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: GestureDetector(
+                  onTap: () async {
+                    await context.push('/app/story/${story.id}');
+                    _loadStories(); // Refresh after returning
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.card,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        StoryCover(colors: story.coverColors),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                story.title,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: AppColors.foreground,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${story.pageCount} pages',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: AppColors.mutedForeground,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                story.lastEditedDisplay,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.mutedForeground,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (!story.isSynced)
+                          Container(
+                            width: 8,
+                            height: 8,
+                            margin: const EdgeInsets.only(right: 8),
+                            decoration: const BoxDecoration(
+                              color: AppColors.accent,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        const Icon(
+                          Icons.chevron_right,
+                          color: AppColors.mutedForeground,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
           const SizedBox(height: 24),
           Row(
             children: const [
-              Icon(Icons.auto_awesome, size: 20, color: AppColors.mutedForeground),
+              Icon(Icons.auto_awesome,
+                  size: 20, color: AppColors.mutedForeground),
               SizedBox(width: 8),
               Text(
                 'Writing Tips',

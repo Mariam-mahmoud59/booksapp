@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
 import '../models/story.dart';
+import '../repositories/story_repository.dart';
 
 class StoryCreationScreen extends StatefulWidget {
   const StoryCreationScreen({super.key});
@@ -11,18 +12,18 @@ class StoryCreationScreen extends StatefulWidget {
 }
 
 class _StoryCreationScreenState extends State<StoryCreationScreen> {
+  final StoryRepository _repo = StoryRepository();
   final _titleController = TextEditingController();
-  final List<StoryPage> _pages = [StoryPage(id: '1')];
-  String _activePageId = '1';
+  List<StoryPage> _pages = [];
+  String? _activePageId;
   bool _isSyncing = false;
   TextEditingController? _contentController;
+  Story? _createdStory;
 
   @override
   void initState() {
     super.initState();
-    _contentController = TextEditingController(
-      text: _activePage?.content ?? '',
-    );
+    _contentController = TextEditingController();
   }
 
   @override
@@ -35,25 +36,72 @@ class _StoryCreationScreenState extends State<StoryCreationScreen> {
   StoryPage? get _activePage =>
       _pages.where((p) => p.id == _activePageId).firstOrNull;
 
-  void _addPage() {
-    final newPage = StoryPage(id: DateTime.now().millisecondsSinceEpoch.toString());
+  /// Create the story in SQLite on first content change.
+  Future<void> _ensureStoryCreated() async {
+    if (_createdStory != null) return;
+
+    final title = _titleController.text.trim().isEmpty
+        ? 'Untitled Story'
+        : _titleController.text.trim();
+
+    _createdStory = await _repo.createStory(title: title);
+
+    // Load the auto-created first page
+    final pages = await _repo.getStoryPages(_createdStory!.id);
+    if (mounted) {
+      setState(() {
+        _pages = pages;
+        _activePageId = pages.isNotEmpty ? pages.first.id : null;
+        if (_activePageId != null) {
+          _contentController?.text = _activePage?.content ?? '';
+        }
+      });
+    }
+  }
+
+  Future<void> _addPage() async {
+    await _ensureStoryCreated();
+    if (_createdStory == null) return;
+
+    final page = await _repo.addPage(_createdStory!.id);
     setState(() {
-      _pages.add(newPage);
-      _activePageId = newPage.id;
+      _pages.add(page);
+      _activePageId = page.id;
     });
     _contentController?.text = '';
   }
 
-  void _updateContent(String content) {
-    _activePage?.content = content;
+  Future<void> _updateContent(String content) async {
+    final page = _activePage;
+    if (page == null) return;
+
+    page.content = content;
     setState(() => _isSyncing = true);
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) setState(() => _isSyncing = false);
-    });
+
+    // Debounced save
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (page.content == content) {
+      await _repo.updatePage(page.copyWith(
+        content: content,
+        updatedAt: DateTime.now(),
+      ));
+    }
+
+    if (mounted) setState(() => _isSyncing = false);
   }
 
-  void _deletePage(String pageId) {
+  Future<void> _updateTitle() async {
+    if (_createdStory == null) return;
+    final title = _titleController.text.trim();
+    if (title.isEmpty) return;
+
+    await _repo.updateStory(_createdStory!.copyWith(title: title));
+    _createdStory = _createdStory!.copyWith(title: title);
+  }
+
+  Future<void> _deletePage(String pageId) async {
     if (_pages.length > 1) {
+      await _repo.deletePage(pageId);
       setState(() {
         _pages.removeWhere((p) => p.id == pageId);
         if (_activePageId == pageId) {
@@ -72,15 +120,21 @@ class _StoryCreationScreenState extends State<StoryCreationScreen> {
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: const BoxDecoration(
                 color: AppColors.card,
-                border: Border(bottom: BorderSide(color: AppColors.border)),
+                border:
+                    Border(bottom: BorderSide(color: AppColors.border)),
               ),
               child: Row(
                 children: [
                   IconButton(
-                    onPressed: () => context.go('/app'),
+                    onPressed: () async {
+                      // Save title before leaving
+                      if (_createdStory != null) await _updateTitle();
+                      if (mounted) context.go('/app');
+                    },
                     icon: const Icon(Icons.chevron_left,
                         size: 28, color: AppColors.foreground),
                     padding: EdgeInsets.zero,
@@ -99,7 +153,7 @@ class _StoryCreationScreenState extends State<StoryCreationScreen> {
                         ),
                         const SizedBox(width: 8),
                         const Text(
-                          'Syncing...',
+                          'Saving...',
                           style: TextStyle(
                             fontSize: 14,
                             color: AppColors.mutedForeground,
@@ -133,6 +187,11 @@ class _StoryCreationScreenState extends State<StoryCreationScreen> {
                   children: [
                     TextField(
                       controller: _titleController,
+                      onChanged: (_) {
+                        // Auto-create story on first title change
+                        if (_createdStory == null) _ensureStoryCreated();
+                      },
+                      onEditingComplete: _updateTitle,
                       style: const TextStyle(
                         fontSize: 28,
                         color: AppColors.foreground,
@@ -177,7 +236,8 @@ class _StoryCreationScreenState extends State<StoryCreationScreen> {
                                 decoration: BoxDecoration(
                                   color: AppColors.secondary,
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: AppColors.border),
+                                  border:
+                                      Border.all(color: AppColors.border),
                                 ),
                                 child: const Icon(
                                   Icons.add,
@@ -236,7 +296,10 @@ class _StoryCreationScreenState extends State<StoryCreationScreen> {
                       padding: const EdgeInsets.all(16),
                       child: TextField(
                         controller: _contentController,
-                        onChanged: _updateContent,
+                        onChanged: (content) async {
+                          await _ensureStoryCreated();
+                          _updateContent(content);
+                        },
                         maxLines: null,
                         style: const TextStyle(
                           fontSize: 16,
@@ -260,12 +323,17 @@ class _StoryCreationScreenState extends State<StoryCreationScreen> {
                     const SizedBox(height: 16),
                     if (_pages.length > 1)
                       OutlinedButton.icon(
-                        onPressed: () => _deletePage(_activePageId),
+                        onPressed: () {
+                          if (_activePageId != null) {
+                            _deletePage(_activePageId!);
+                          }
+                        },
                         icon: const Icon(Icons.delete_outline, size: 18),
                         label: const Text('Delete Page'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: const Color(0xFFD4183D),
-                          side: const BorderSide(color: Color(0xFFD4183D)),
+                          side:
+                              const BorderSide(color: Color(0xFFD4183D)),
                           minimumSize: const Size(0, 44),
                         ),
                       ),

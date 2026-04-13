@@ -1,12 +1,71 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
+import '../models/profile.dart';
+import '../repositories/story_repository.dart';
+import '../services/supabase_service.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final StoryRepository _repo = StoryRepository();
+  Profile? _profile;
+  int _storyCount = 0;
+  int _wordCount = 0;
+  int _favoriteCount = 0;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final profile = await _repo.getProfile();
+    final storyCount = await _repo.getStoryCount();
+    final wordCount = await _repo.getTotalWordCount();
+    final favCount = await _repo.getFavoriteCount();
+
+    if (mounted) {
+      setState(() {
+        _profile = profile;
+        _storyCount = storyCount;
+        _wordCount = wordCount;
+        _favoriteCount = favCount;
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _formatWordCount(int count) {
+    if (count >= 1000) {
+      return '${(count / 1000).toStringAsFixed(1)}K';
+    }
+    return count.toString();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation(AppColors.accent),
+          ),
+        ),
+      );
+    }
+
+    final username = _profile?.username ?? 'Writer';
+    final initial = username.isNotEmpty ? username[0].toUpperCase() : 'W';
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -48,10 +107,10 @@ class ProfileScreen extends StatelessWidget {
                           colors: [AppColors.accent, AppColors.primary],
                         ),
                       ),
-                      child: const Center(
+                      child: Center(
                         child: Text(
-                          'L',
-                          style: TextStyle(
+                          initial,
+                          style: const TextStyle(
                             fontSize: 36,
                             color: Colors.white,
                             fontWeight: FontWeight.w500,
@@ -60,18 +119,20 @@ class ProfileScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Text(
-                      'Luna Writer',
-                      style: TextStyle(
+                    Text(
+                      username,
+                      style: const TextStyle(
                         fontSize: 22,
                         color: AppColors.foreground,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      'Storyteller & Dreamer',
-                      style: TextStyle(
+                    Text(
+                      SupabaseService().isAuthenticated
+                          ? 'Synced ✓'
+                          : 'Offline Mode',
+                      style: const TextStyle(
                         fontSize: 14,
                         color: AppColors.mutedForeground,
                       ),
@@ -87,32 +148,34 @@ class ProfileScreen extends StatelessWidget {
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
                 childAspectRatio: 1.2,
-                children: const [
+                children: [
                   _StatCard(
                     icon: Icons.menu_book_outlined,
-                    value: '24',
+                    value: '$_storyCount',
                     label: 'Stories',
                   ),
                   _StatCard(
-                    icon: Icons.calendar_today_outlined,
-                    value: '156',
-                    label: 'Days Writing',
+                    icon: Icons.favorite_outlined,
+                    value: '$_favoriteCount',
+                    label: 'Favorites',
                   ),
                   _StatCard(
                     icon: Icons.trending_up,
-                    value: '12.4K',
+                    value: _formatWordCount(_wordCount),
                     label: 'Words Written',
                   ),
                   _StatCard(
-                    icon: Icons.emoji_events_outlined,
-                    value: '8',
-                    label: 'Achievements',
+                    icon: Icons.cloud_done_outlined,
+                    value: SupabaseService().isAuthenticated
+                        ? 'Active'
+                        : 'Off',
+                    label: 'Sync Status',
                   ),
                 ],
               ),
               const SizedBox(height: 32),
               const Text(
-                'RECENT ACHIEVEMENTS',
+                'ACCOUNT',
                 style: TextStyle(
                   fontSize: 12,
                   color: AppColors.mutedForeground,
@@ -120,26 +183,32 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              _AchievementItem(
-                icon: Icons.star_rounded,
-                title: 'First Story',
-                subtitle: 'Completed your first story',
-                color: const Color(0xFFFFC107),
-              ),
-              const SizedBox(height: 8),
-              _AchievementItem(
-                icon: Icons.local_fire_department,
-                title: '7-Day Streak',
-                subtitle: 'Wrote every day for a week',
-                color: const Color(0xFFFF5722),
-              ),
-              const SizedBox(height: 8),
-              _AchievementItem(
-                icon: Icons.auto_awesome,
-                title: 'Prolific Writer',
-                subtitle: 'Wrote over 10,000 words',
-                color: AppColors.accent,
-              ),
+              if (!SupabaseService().isAuthenticated)
+                _ActionItem(
+                  icon: Icons.login,
+                  title: 'Sign In',
+                  subtitle: 'Enable cloud sync',
+                  color: AppColors.accent,
+                  onTap: () => context.go('/login'),
+                )
+              else
+                _ActionItem(
+                  icon: Icons.sync,
+                  title: 'Sync Now',
+                  subtitle: 'Push & pull latest changes',
+                  color: AppColors.accent,
+                  onTap: () async {
+                    await _repo.triggerSync();
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Sync triggered'),
+                          duration: Duration(seconds: 1),
+                        ),
+                      );
+                    }
+                  },
+                ),
             ],
           ),
         ),
@@ -195,61 +264,66 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _AchievementItem extends StatelessWidget {
+class _ActionItem extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
   final Color color;
+  final VoidCallback onTap;
 
-  const _AchievementItem({
+  const _ActionItem({
     required this.icon,
     required this.title,
     required this.subtitle,
     required this.color,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(10),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, size: 22, color: color),
             ),
-            child: Icon(icon, size: 22, color: color),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 15,
-                  color: AppColors.foreground,
-                  fontWeight: FontWeight.w500,
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: AppColors.foreground,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
-              Text(
-                subtitle,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.mutedForeground,
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.mutedForeground,
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
 import '../models/story.dart';
+import '../repositories/story_repository.dart';
 
 class StoryEditorScreen extends StatefulWidget {
   final String storyId;
@@ -13,28 +14,21 @@ class StoryEditorScreen extends StatefulWidget {
 }
 
 class _StoryEditorScreenState extends State<StoryEditorScreen> {
+  final StoryRepository _repo = StoryRepository();
   late TextEditingController _titleController;
-  final List<StoryPage> _pages = [
-    StoryPage(
-      id: '1',
-      content:
-          'Once upon a time, in a small village nestled between rolling hills, there was a garden that nobody knew about. It was hidden behind an old stone wall, covered in ivy and forgotten by time...',
-    ),
-    StoryPage(
-      id: '2',
-      content:
-          'One day, a curious young girl named Luna discovered a small gap in the wall. Intrigued, she squeezed through and found herself in the most beautiful garden she had ever seen.',
-    ),
-  ];
-  String _activePageId = '1';
-  bool _isSyncing = false;
   late TextEditingController _contentController;
+  List<StoryPage> _pages = [];
+  String? _activePageId;
+  bool _isSyncing = false;
+  bool _isLoading = true;
+  Story? _story;
 
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController(text: 'The Hidden Garden');
-    _contentController = TextEditingController(text: _pages.first.content);
+    _titleController = TextEditingController();
+    _contentController = TextEditingController();
+    _loadStory();
   }
 
   @override
@@ -44,30 +38,66 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
     super.dispose();
   }
 
+  Future<void> _loadStory() async {
+    final story = await _repo.getStory(widget.storyId);
+    final pages = await _repo.getStoryPages(widget.storyId);
+
+    if (mounted) {
+      setState(() {
+        _story = story;
+        _pages = pages;
+        _titleController.text = story?.title ?? '';
+        if (pages.isNotEmpty) {
+          _activePageId = pages.first.id;
+          _contentController.text = pages.first.content;
+        }
+        _isLoading = false;
+      });
+    }
+  }
+
   StoryPage? get _activePage =>
       _pages.where((p) => p.id == _activePageId).firstOrNull;
 
-  void _addPage() {
-    final newPage = StoryPage(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-    );
+  Future<void> _addPage() async {
+    final page = await _repo.addPage(widget.storyId);
     setState(() {
-      _pages.add(newPage);
-      _activePageId = newPage.id;
+      _pages.add(page);
+      _activePageId = page.id;
     });
     _contentController.text = '';
   }
 
-  void _updateContent(String content) {
-    _activePage?.content = content;
+  Future<void> _updateContent(String content) async {
+    final page = _activePage;
+    if (page == null) return;
+
+    page.content = content;
     setState(() => _isSyncing = true);
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) setState(() => _isSyncing = false);
-    });
+
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (page.content == content) {
+      await _repo.updatePage(page.copyWith(
+        content: content,
+        updatedAt: DateTime.now(),
+      ));
+    }
+
+    if (mounted) setState(() => _isSyncing = false);
   }
 
-  void _deletePage(String pageId) {
+  Future<void> _updateTitle() async {
+    if (_story == null) return;
+    final title = _titleController.text.trim();
+    if (title.isEmpty) return;
+
+    await _repo.updateStory(_story!.copyWith(title: title));
+    _story = _story!.copyWith(title: title);
+  }
+
+  Future<void> _deletePage(String pageId) async {
     if (_pages.length > 1) {
+      await _repo.deletePage(pageId);
       setState(() {
         _pages.removeWhere((p) => p.id == pageId);
         if (_activePageId == pageId) {
@@ -80,22 +110,39 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation(AppColors.accent),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
               decoration: const BoxDecoration(
                 color: AppColors.card,
-                border: Border(bottom: BorderSide(color: AppColors.border)),
+                border:
+                    Border(bottom: BorderSide(color: AppColors.border)),
               ),
               child: Row(
                 children: [
                   IconButton(
-                    onPressed: () =>
-                        context.go('/app/story/${widget.storyId}'),
+                    onPressed: () async {
+                      await _updateTitle();
+                      if (mounted) {
+                        context.go('/app/story/${widget.storyId}');
+                      }
+                    },
                     icon: const Icon(Icons.chevron_left,
                         size: 28, color: AppColors.foreground),
                   ),
@@ -112,7 +159,7 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        const Text('Syncing...',
+                        const Text('Saving...',
                             style: TextStyle(
                                 fontSize: 14,
                                 color: AppColors.mutedForeground)),
@@ -145,6 +192,7 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
                   children: [
                     TextField(
                       controller: _titleController,
+                      onEditingComplete: _updateTitle,
                       style: const TextStyle(
                         fontSize: 28,
                         color: AppColors.foreground,
@@ -180,7 +228,8 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
                                 decoration: BoxDecoration(
                                   color: AppColors.secondary,
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: AppColors.border),
+                                  border:
+                                      Border.all(color: AppColors.border),
                                 ),
                                 child: const Icon(Icons.add,
                                     size: 20, color: AppColors.foreground),
@@ -250,19 +299,25 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
                           focusedBorder: InputBorder.none,
                           filled: false,
                           contentPadding: EdgeInsets.zero,
-                          hintStyle: TextStyle(color: AppColors.mutedForeground),
+                          hintStyle: TextStyle(
+                              color: AppColors.mutedForeground),
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
                     if (_pages.length > 1)
                       OutlinedButton.icon(
-                        onPressed: () => _deletePage(_activePageId),
+                        onPressed: () {
+                          if (_activePageId != null) {
+                            _deletePage(_activePageId!);
+                          }
+                        },
                         icon: const Icon(Icons.delete_outline, size: 18),
                         label: const Text('Delete Page'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: const Color(0xFFD4183D),
-                          side: const BorderSide(color: Color(0xFFD4183D)),
+                          side: const BorderSide(
+                              color: Color(0xFFD4183D)),
                           minimumSize: const Size(0, 44),
                         ),
                       ),

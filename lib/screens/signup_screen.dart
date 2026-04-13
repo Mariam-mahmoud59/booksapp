@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
+import '../services/supabase_service.dart';
+import '../models/profile.dart';
+import '../services/database_helper.dart';
+import '../repositories/story_repository.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -13,6 +17,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _isLoading = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -22,8 +28,67 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  void _handleSignUp() {
-    context.go('/app');
+  Future<void> _handleSignUp() async {
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+      setState(() => _error = 'Please fill in all fields');
+      return;
+    }
+
+    if (password.length < 6) {
+      setState(() => _error = 'Password must be at least 6 characters');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final response = await SupabaseService().signUp(email, password);
+      final userId = response.user?.id;
+
+      if (userId != null) {
+        // Create local profile
+        final now = DateTime.now();
+        await DatabaseHelper().insertProfile(Profile(
+          id: userId,
+          username: name,
+          createdAt: now,
+          updatedAt: now,
+        ));
+
+        // Seed data for this user
+        await StoryRepository().seedIfNeeded();
+
+        // Trigger initial sync to push profile to Supabase
+        await DatabaseHelper().enqueueSyncOperation(
+          tableName: 'profiles',
+          recordId: userId,
+          operation: 'INSERT',
+          payload: {
+            'id': userId,
+            'username': name,
+            'created_at': now.toIso8601String(),
+            'updated_at': now.toIso8601String(),
+          },
+        );
+        StoryRepository().triggerSync();
+      }
+
+      if (mounted) context.go('/app');
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = 'Sign up failed. Please try again.';
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -71,9 +136,34 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                     ),
                     const SizedBox(height: 48),
+                    if (_error != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD4183D).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.error_outline,
+                                size: 20, color: Color(0xFFD4183D)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _error!,
+                                style: const TextStyle(
+                                    color: Color(0xFFD4183D), fontSize: 14),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                     const Text(
                       'Name',
-                      style: TextStyle(fontSize: 14, color: AppColors.foreground),
+                      style:
+                          TextStyle(fontSize: 14, color: AppColors.foreground),
                     ),
                     const SizedBox(height: 8),
                     TextFormField(
@@ -89,7 +179,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     const SizedBox(height: 20),
                     const Text(
                       'Email',
-                      style: TextStyle(fontSize: 14, color: AppColors.foreground),
+                      style:
+                          TextStyle(fontSize: 14, color: AppColors.foreground),
                     ),
                     const SizedBox(height: 8),
                     TextFormField(
@@ -106,7 +197,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     const SizedBox(height: 20),
                     const Text(
                       'Password',
-                      style: TextStyle(fontSize: 14, color: AppColors.foreground),
+                      style:
+                          TextStyle(fontSize: 14, color: AppColors.foreground),
                     ),
                     const SizedBox(height: 8),
                     TextFormField(
@@ -125,8 +217,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       width: double.infinity,
                       height: 56,
                       child: ElevatedButton(
-                        onPressed: _handleSignUp,
-                        child: const Text('Create Account'),
+                        onPressed: _isLoading ? null : _handleSignUp,
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor:
+                                      AlwaysStoppedAnimation(Colors.white),
+                                ),
+                              )
+                            : const Text('Create Account'),
                       ),
                     ),
                     const SizedBox(height: 24),

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
 import '../models/story.dart';
 import '../widgets/story_cover.dart';
+import '../repositories/story_repository.dart';
 
 class MyStoriesScreen extends StatefulWidget {
   const MyStoriesScreen({super.key});
@@ -12,9 +13,18 @@ class MyStoriesScreen extends StatefulWidget {
 }
 
 class _MyStoriesScreenState extends State<MyStoriesScreen> {
+  final StoryRepository _repo = StoryRepository();
   bool _isGridView = true;
   String _searchQuery = '';
   final _searchController = TextEditingController();
+  List<Story> _stories = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStories();
+  }
 
   @override
   void dispose() {
@@ -22,12 +32,22 @@ class _MyStoriesScreenState extends State<MyStoriesScreen> {
     super.dispose();
   }
 
-  List<Story> get _filteredStories {
-    if (_searchQuery.isEmpty) return mockStories;
-    return mockStories
-        .where((s) =>
-            s.title.toLowerCase().contains(_searchQuery.toLowerCase()))
-        .toList();
+  Future<void> _loadStories() async {
+    setState(() => _isLoading = true);
+    final stories = _searchQuery.isEmpty
+        ? await _repo.getAllStories()
+        : await _repo.searchStories(_searchQuery);
+    if (mounted) {
+      setState(() {
+        _stories = stories;
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _onSearchChanged(String value) {
+    _searchQuery = value;
+    _loadStories();
   }
 
   @override
@@ -67,7 +87,7 @@ class _MyStoriesScreenState extends State<MyStoriesScreen> {
               const SizedBox(height: 20),
               TextFormField(
                 controller: _searchController,
-                onChanged: (v) => setState(() => _searchQuery = v),
+                onChanged: _onSearchChanged,
                 decoration: const InputDecoration(
                   prefixIcon: Icon(
                     Icons.search,
@@ -78,16 +98,54 @@ class _MyStoriesScreenState extends State<MyStoriesScreen> {
               ),
               const SizedBox(height: 20),
               Expanded(
-                child: _isGridView
-                    ? _GridView(stories: _filteredStories)
-                    : _ListView(stories: _filteredStories),
+                child: _isLoading
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          valueColor:
+                              AlwaysStoppedAnimation(AppColors.accent),
+                        ),
+                      )
+                    : _stories.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.menu_book_outlined,
+                                  size: 64,
+                                  color: AppColors.mutedForeground
+                                      .withOpacity(0.4),
+                                ),
+                                const SizedBox(height: 16),
+                                const Text(
+                                  'No stories found',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    color: AppColors.mutedForeground,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : _isGridView
+                            ? _GridView(
+                                stories: _stories,
+                                onReturn: _loadStories,
+                              )
+                            : _ListView(
+                                stories: _stories,
+                                onReturn: _loadStories,
+                              ),
               ),
             ],
           ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => context.go('/app/create'),
+        onPressed: () async {
+          await context.push('/app/create');
+          _loadStories();
+        },
         backgroundColor: AppColors.accent,
         child: const Icon(Icons.add, color: Colors.white),
       ),
@@ -129,8 +187,9 @@ class _ViewToggleButton extends StatelessWidget {
 
 class _GridView extends StatelessWidget {
   final List<Story> stories;
+  final VoidCallback onReturn;
 
-  const _GridView({required this.stories});
+  const _GridView({required this.stories, required this.onReturn});
 
   @override
   Widget build(BuildContext context) {
@@ -145,7 +204,10 @@ class _GridView extends StatelessWidget {
       itemBuilder: (context, index) {
         final story = stories[index];
         return GestureDetector(
-          onTap: () => context.go('/app/story/${story.id}'),
+          onTap: () async {
+            await context.push('/app/story/${story.id}');
+            onReturn();
+          },
           child: Container(
             decoration: BoxDecoration(
               color: AppColors.card,
@@ -179,22 +241,37 @@ class _GridView extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        '${story.pages} pages',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.mutedForeground,
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            '${story.pageCount} pages',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.mutedForeground,
+                            ),
+                          ),
+                          if (!story.isSynced) ...[
+                            const SizedBox(width: 4),
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: const BoxDecoration(
+                                color: AppColors.accent,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                      const SizedBox(height: 8),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: story.progress / 100,
-                          backgroundColor: AppColors.secondary,
-                          valueColor:
-                              const AlwaysStoppedAnimation(AppColors.accent),
-                          minHeight: 4,
+                      const SizedBox(height: 4),
+                      Text(
+                        story.status,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: story.status == 'published'
+                              ? AppColors.accent
+                              : AppColors.mutedForeground,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
@@ -211,8 +288,9 @@ class _GridView extends StatelessWidget {
 
 class _ListView extends StatelessWidget {
   final List<Story> stories;
+  final VoidCallback onReturn;
 
-  const _ListView({required this.stories});
+  const _ListView({required this.stories, required this.onReturn});
 
   @override
   Widget build(BuildContext context) {
@@ -222,7 +300,10 @@ class _ListView extends StatelessWidget {
       itemBuilder: (context, index) {
         final story = stories[index];
         return GestureDetector(
-          onTap: () => context.go('/app/story/${story.id}'),
+          onTap: () async {
+            await context.push('/app/story/${story.id}');
+            onReturn();
+          },
           child: Container(
             decoration: BoxDecoration(
               color: AppColors.card,
@@ -247,22 +328,37 @@ class _ListView extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${story.pages} pages · ${story.lastEdited}',
+                        '${story.pageCount} pages · ${story.lastEditedDisplay}',
                         style: const TextStyle(
                           fontSize: 14,
                           color: AppColors.mutedForeground,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: story.progress / 100,
-                          backgroundColor: AppColors.secondary,
-                          valueColor:
-                              const AlwaysStoppedAnimation(AppColors.accent),
-                          minHeight: 4,
-                        ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(
+                            story.status,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: story.status == 'published'
+                                  ? AppColors.accent
+                                  : AppColors.mutedForeground,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          if (!story.isSynced) ...[
+                            const SizedBox(width: 4),
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: const BoxDecoration(
+                                color: AppColors.accent,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ],
                   ),
