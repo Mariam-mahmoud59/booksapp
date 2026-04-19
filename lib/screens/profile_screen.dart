@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
-import '../models/profile.dart';
-import '../repositories/story_repository.dart';
-import '../services/supabase_service.dart';
+import '../providers/auth_provider.dart';
+import '../providers/story_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -13,34 +13,12 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final StoryRepository _repo = StoryRepository();
-  Profile? _profile;
-  int _storyCount = 0;
-  int _wordCount = 0;
-  int _favoriteCount = 0;
-  bool _isLoading = true;
-
   @override
   void initState() {
     super.initState();
-    _loadProfile();
-  }
-
-  Future<void> _loadProfile() async {
-    final profile = await _repo.getProfile();
-    final storyCount = await _repo.getStoryCount();
-    final wordCount = await _repo.getTotalWordCount();
-    final favCount = await _repo.getFavoriteCount();
-
-    if (mounted) {
-      setState(() {
-        _profile = profile;
-        _storyCount = storyCount;
-        _wordCount = wordCount;
-        _favoriteCount = favCount;
-        _isLoading = false;
-      });
-    }
+    final authProvider = context.read<AuthProvider>();
+    authProvider.loadProfile();
+    authProvider.loadStats();
   }
 
   String _formatWordCount(int count) {
@@ -52,7 +30,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
+    final authProvider = context.watch<AuthProvider>();
+    final profile = authProvider.profile;
+
+    if (profile == null && authProvider.isLoading) {
       return const Scaffold(
         backgroundColor: AppColors.background,
         body: Center(
@@ -63,7 +44,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     }
 
-    final username = _profile?.username ?? 'Writer';
+    final username = profile?.username ?? 'Writer';
     final initial = username.isNotEmpty ? username[0].toUpperCase() : 'W';
 
     return Scaffold(
@@ -129,7 +110,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      SupabaseService().isAuthenticated
+                      authProvider.isAuthenticated
                           ? 'Synced ✓'
                           : 'Offline Mode',
                       style: const TextStyle(
@@ -151,24 +132,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   _StatCard(
                     icon: Icons.menu_book_outlined,
-                    value: '$_storyCount',
+                    value: '${authProvider.storyCount}',
                     label: 'Stories',
                   ),
                   _StatCard(
                     icon: Icons.favorite_outlined,
-                    value: '$_favoriteCount',
+                    value: '${authProvider.favoriteCount}',
                     label: 'Favorites',
                   ),
                   _StatCard(
                     icon: Icons.trending_up,
-                    value: _formatWordCount(_wordCount),
+                    value: _formatWordCount(authProvider.wordCount),
                     label: 'Words Written',
                   ),
                   _StatCard(
                     icon: Icons.cloud_done_outlined,
-                    value: SupabaseService().isAuthenticated
-                        ? 'Active'
-                        : 'Off',
+                    value: authProvider.isAuthenticated ? 'Active' : 'Off',
                     label: 'Sync Status',
                   ),
                 ],
@@ -183,7 +162,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              if (!SupabaseService().isAuthenticated)
+              if (!authProvider.isAuthenticated)
                 _ActionItem(
                   icon: Icons.login,
                   title: 'Sign In',
@@ -198,7 +177,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   subtitle: 'Push & pull latest changes',
                   color: AppColors.accent,
                   onTap: () async {
-                    await _repo.triggerSync();
+                    await context.read<StoryProvider>().triggerSync();
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -206,6 +185,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           duration: Duration(seconds: 1),
                         ),
                       );
+                      // Refresh stats after sync
+                      context.read<AuthProvider>().loadStats();
                     }
                   },
                 ),

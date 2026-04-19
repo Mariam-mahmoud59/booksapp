@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/story.dart';
-import '../repositories/story_repository.dart';
+import '../providers/story_provider.dart';
 
 class StoryCreationScreen extends StatefulWidget {
   const StoryCreationScreen({super.key});
@@ -12,7 +13,7 @@ class StoryCreationScreen extends StatefulWidget {
 }
 
 class _StoryCreationScreenState extends State<StoryCreationScreen> {
-  final StoryRepository _repo = StoryRepository();
+  StoryProvider get _provider => context.read<StoryProvider>();
   final _titleController = TextEditingController();
   List<StoryPage> _pages = [];
   String? _activePageId;
@@ -44,10 +45,10 @@ class _StoryCreationScreenState extends State<StoryCreationScreen> {
         ? 'Untitled Story'
         : _titleController.text.trim();
 
-    _createdStory = await _repo.createStory(title: title);
+    _createdStory = await _provider.createStory(title: title);
 
     // Load the auto-created first page
-    final pages = await _repo.getStoryPages(_createdStory!.id);
+    final pages = await _provider.getStoryPages(_createdStory!.id);
     if (mounted) {
       setState(() {
         _pages = pages;
@@ -63,7 +64,7 @@ class _StoryCreationScreenState extends State<StoryCreationScreen> {
     await _ensureStoryCreated();
     if (_createdStory == null) return;
 
-    final page = await _repo.addPage(_createdStory!.id);
+    final page = await _provider.addPage(_createdStory!.id);
     setState(() {
       _pages.add(page);
       _activePageId = page.id;
@@ -81,7 +82,7 @@ class _StoryCreationScreenState extends State<StoryCreationScreen> {
     // Debounced save
     await Future.delayed(const Duration(milliseconds: 500));
     if (page.content == content) {
-      await _repo.updatePage(page.copyWith(
+      await _provider.updatePage(page.copyWith(
         content: content,
         updatedAt: DateTime.now(),
       ));
@@ -95,13 +96,13 @@ class _StoryCreationScreenState extends State<StoryCreationScreen> {
     final title = _titleController.text.trim();
     if (title.isEmpty) return;
 
-    await _repo.updateStory(_createdStory!.copyWith(title: title));
+    await _provider.updateStory(_createdStory!.copyWith(title: title));
     _createdStory = _createdStory!.copyWith(title: title);
   }
 
   Future<void> _deletePage(String pageId) async {
     if (_pages.length > 1) {
-      await _repo.deletePage(pageId);
+      await _provider.deletePage(pageId);
       setState(() {
         _pages.removeWhere((p) => p.id == pageId);
         if (_activePageId == pageId) {

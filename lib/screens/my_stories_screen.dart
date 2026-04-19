@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/story.dart';
 import '../widgets/story_cover.dart';
-import '../repositories/story_repository.dart';
+import '../providers/story_provider.dart';
 
 class MyStoriesScreen extends StatefulWidget {
   const MyStoriesScreen({super.key});
@@ -13,17 +14,13 @@ class MyStoriesScreen extends StatefulWidget {
 }
 
 class _MyStoriesScreenState extends State<MyStoriesScreen> {
-  final StoryRepository _repo = StoryRepository();
   bool _isGridView = true;
-  String _searchQuery = '';
   final _searchController = TextEditingController();
-  List<Story> _stories = [];
-  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadStories();
+    context.read<StoryProvider>().loadStories();
   }
 
   @override
@@ -32,26 +29,16 @@ class _MyStoriesScreenState extends State<MyStoriesScreen> {
     super.dispose();
   }
 
-  Future<void> _loadStories() async {
-    setState(() => _isLoading = true);
-    final stories = _searchQuery.isEmpty
-        ? await _repo.getAllStories()
-        : await _repo.searchStories(_searchQuery);
-    if (mounted) {
-      setState(() {
-        _stories = stories;
-        _isLoading = false;
-      });
-    }
-  }
-
   void _onSearchChanged(String value) {
-    _searchQuery = value;
-    _loadStories();
+    context.read<StoryProvider>().searchStories(value);
   }
 
   @override
   Widget build(BuildContext context) {
+    final storyProvider = context.watch<StoryProvider>();
+    final stories = storyProvider.stories;
+    final isLoading = storyProvider.isLoading;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -98,14 +85,14 @@ class _MyStoriesScreenState extends State<MyStoriesScreen> {
               ),
               const SizedBox(height: 20),
               Expanded(
-                child: _isLoading
+                child: isLoading
                     ? const Center(
                         child: CircularProgressIndicator(
                           valueColor:
                               AlwaysStoppedAnimation(AppColors.accent),
                         ),
                       )
-                    : _stories.isEmpty
+                    : stories.isEmpty
                         ? Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -128,14 +115,8 @@ class _MyStoriesScreenState extends State<MyStoriesScreen> {
                             ),
                           )
                         : _isGridView
-                            ? _GridView(
-                                stories: _stories,
-                                onReturn: _loadStories,
-                              )
-                            : _ListView(
-                                stories: _stories,
-                                onReturn: _loadStories,
-                              ),
+                            ? _GridView(stories: stories)
+                            : _ListView(stories: stories),
               ),
             ],
           ),
@@ -144,7 +125,9 @@ class _MyStoriesScreenState extends State<MyStoriesScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           await context.push('/app/create');
-          _loadStories();
+          if (mounted) {
+            context.read<StoryProvider>().loadStories();
+          }
         },
         backgroundColor: AppColors.accent,
         child: const Icon(Icons.add, color: Colors.white),
@@ -187,9 +170,8 @@ class _ViewToggleButton extends StatelessWidget {
 
 class _GridView extends StatelessWidget {
   final List<Story> stories;
-  final VoidCallback onReturn;
 
-  const _GridView({required this.stories, required this.onReturn});
+  const _GridView({required this.stories});
 
   @override
   Widget build(BuildContext context) {
@@ -206,7 +188,9 @@ class _GridView extends StatelessWidget {
         return GestureDetector(
           onTap: () async {
             await context.push('/app/story/${story.id}');
-            onReturn();
+            if (context.mounted) {
+              context.read<StoryProvider>().loadStories();
+            }
           },
           child: Container(
             decoration: BoxDecoration(
@@ -288,9 +272,8 @@ class _GridView extends StatelessWidget {
 
 class _ListView extends StatelessWidget {
   final List<Story> stories;
-  final VoidCallback onReturn;
 
-  const _ListView({required this.stories, required this.onReturn});
+  const _ListView({required this.stories});
 
   @override
   Widget build(BuildContext context) {
@@ -302,7 +285,9 @@ class _ListView extends StatelessWidget {
         return GestureDetector(
           onTap: () async {
             await context.push('/app/story/${story.id}');
-            onReturn();
+            if (context.mounted) {
+              context.read<StoryProvider>().loadStories();
+            }
           },
           child: Container(
             decoration: BoxDecoration(

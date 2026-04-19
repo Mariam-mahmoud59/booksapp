@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
-import '../models/story.dart';
 import '../widgets/story_cover.dart';
-import '../repositories/story_repository.dart';
+import '../providers/story_provider.dart';
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -13,33 +13,18 @@ class FavoritesScreen extends StatefulWidget {
 }
 
 class _FavoritesScreenState extends State<FavoritesScreen> {
-  final StoryRepository _repo = StoryRepository();
-  List<Story> _favorites = [];
-  bool _isLoading = true;
-
   @override
   void initState() {
     super.initState();
-    _loadFavorites();
-  }
-
-  Future<void> _loadFavorites() async {
-    final favorites = await _repo.getFavoriteStories();
-    if (mounted) {
-      setState(() {
-        _favorites = favorites;
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _toggleFavorite(String storyId) async {
-    await _repo.toggleFavorite(storyId);
-    _loadFavorites(); // Refresh the list
+    context.read<StoryProvider>().loadFavorites();
   }
 
   @override
   Widget build(BuildContext context) {
+    final storyProvider = context.watch<StoryProvider>();
+    final favorites = storyProvider.favoriteStories;
+    final isLoading = storyProvider.isLoading;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -63,7 +48,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 ],
               ),
               const SizedBox(height: 24),
-              if (_isLoading)
+              if (isLoading)
                 const Expanded(
                   child: Center(
                     child: CircularProgressIndicator(
@@ -71,7 +56,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                     ),
                   ),
                 )
-              else if (_favorites.isEmpty)
+              else if (favorites.isEmpty)
                 Expanded(
                   child: Center(
                     child: Column(
@@ -106,14 +91,16 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               else
                 Expanded(
                   child: ListView.separated(
-                    itemCount: _favorites.length,
+                    itemCount: favorites.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
-                      final story = _favorites[index];
+                      final story = favorites[index];
                       return GestureDetector(
                         onTap: () async {
                           await context.push('/app/story/${story.id}');
-                          _loadFavorites();
+                          if (mounted) {
+                            context.read<StoryProvider>().loadFavorites();
+                          }
                         },
                         child: Container(
                           decoration: BoxDecoration(
@@ -157,7 +144,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                 ),
                               ),
                               GestureDetector(
-                                onTap: () => _toggleFavorite(story.id),
+                                onTap: () => context
+                                    .read<StoryProvider>()
+                                    .toggleFavorite(story.id),
                                 child: const Icon(
                                   Icons.favorite,
                                   color: AppColors.accent,

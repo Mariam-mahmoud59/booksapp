@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/story.dart';
-import '../repositories/story_repository.dart';
+import '../providers/story_provider.dart';
 
 class StoryEditorScreen extends StatefulWidget {
   final String storyId;
@@ -14,7 +15,7 @@ class StoryEditorScreen extends StatefulWidget {
 }
 
 class _StoryEditorScreenState extends State<StoryEditorScreen> {
-  final StoryRepository _repo = StoryRepository();
+  StoryProvider get _provider => context.read<StoryProvider>();
   late TextEditingController _titleController;
   late TextEditingController _contentController;
   List<StoryPage> _pages = [];
@@ -39,8 +40,8 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
   }
 
   Future<void> _loadStory() async {
-    final story = await _repo.getStory(widget.storyId);
-    final pages = await _repo.getStoryPages(widget.storyId);
+    final story = await _provider.getStory(widget.storyId);
+    final pages = await _provider.getStoryPages(widget.storyId);
 
     if (mounted) {
       setState(() {
@@ -60,7 +61,7 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
       _pages.where((p) => p.id == _activePageId).firstOrNull;
 
   Future<void> _addPage() async {
-    final page = await _repo.addPage(widget.storyId);
+    final page = await _provider.addPage(widget.storyId);
     setState(() {
       _pages.add(page);
       _activePageId = page.id;
@@ -77,7 +78,7 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
 
     await Future.delayed(const Duration(milliseconds: 500));
     if (page.content == content) {
-      await _repo.updatePage(page.copyWith(
+      await _provider.updatePage(page.copyWith(
         content: content,
         updatedAt: DateTime.now(),
       ));
@@ -91,13 +92,13 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
     final title = _titleController.text.trim();
     if (title.isEmpty) return;
 
-    await _repo.updateStory(_story!.copyWith(title: title));
+    await _provider.updateStory(_story!.copyWith(title: title));
     _story = _story!.copyWith(title: title);
   }
 
   Future<void> _deletePage(String pageId) async {
     if (_pages.length > 1) {
-      await _repo.deletePage(pageId);
+      await _provider.deletePage(pageId);
       setState(() {
         _pages.removeWhere((p) => p.id == pageId);
         if (_activePageId == pageId) {

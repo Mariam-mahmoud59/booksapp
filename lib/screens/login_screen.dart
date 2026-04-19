@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
-import '../services/supabase_service.dart';
-import '../repositories/story_repository.dart';
+import '../providers/auth_provider.dart';
+import '../providers/story_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,8 +15,6 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isLoading = false;
-  String? _error;
 
   @override
   void dispose() {
@@ -29,30 +28,22 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      setState(() => _error = 'Please fill in all fields');
+      context.read<AuthProvider>().clearError();
+      // Set error manually for validation
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill in all fields')),
+      );
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+    final authProvider = context.read<AuthProvider>();
+    final success = await authProvider.signIn(email, password);
 
-    try {
-      await SupabaseService().signIn(email, password);
-      // Seed/load data for this user
-      await StoryRepository().seedIfNeeded();
-      // Trigger initial sync
-      StoryRepository().triggerSync();
-
-      if (mounted) context.go('/app');
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = 'Login failed. Check your credentials.';
-          _isLoading = false;
-        });
-      }
+    if (success && mounted) {
+      // Reload stories for the newly authenticated user
+      context.read<StoryProvider>().loadStories();
+      context.go('/app');
     }
   }
 
@@ -63,6 +54,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -106,7 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 48),
-                    if (_error != null) ...[
+                    if (authProvider.error != null) ...[
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -120,7 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                _error!,
+                                authProvider.error!,
                                 style: const TextStyle(
                                     color: Color(0xFFD4183D), fontSize: 14),
                               ),
@@ -183,8 +176,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       width: double.infinity,
                       height: 56,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _handleLogin,
-                        child: _isLoading
+                        onPressed:
+                            authProvider.isLoading ? null : _handleLogin,
+                        child: authProvider.isLoading
                             ? const SizedBox(
                                 height: 20,
                                 width: 20,
