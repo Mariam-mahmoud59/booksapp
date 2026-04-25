@@ -11,28 +11,88 @@ class StoryProvider extends ChangeNotifier {
   List<Story> _stories = [];
   List<Story> _favoriteStories = [];
   bool _isLoading = false;
+  bool _isLoadingFavorites = false;
   String _searchQuery = '';
+  String? _error;
+
+  // Filter & sort state (used by MyStoriesScreen)
+  String _statusFilter = 'all'; // 'all', 'draft', 'published'
+  String _sortOrder = 'recent'; // 'recent', 'oldest', 'alpha'
 
   // ─────────────────── Getters ───────────────────
 
   List<Story> get stories => _stories;
   List<Story> get favoriteStories => _favoriteStories;
   bool get isLoading => _isLoading;
+  bool get isLoadingFavorites => _isLoadingFavorites;
   String get searchQuery => _searchQuery;
+  String? get error => _error;
+  String get statusFilter => _statusFilter;
+  String get sortOrder => _sortOrder;
 
   /// The two most recent stories (for the Home screen).
+  /// Always drawn from the full list, ignoring search/filter.
   List<Story> get recentStories => _stories.take(2).toList();
+
+  /// Stories with status filter + sort applied (for MyStoriesScreen).
+  List<Story> get filteredStories {
+    List<Story> result = List.from(_stories);
+
+    // Apply status filter
+    if (_statusFilter != 'all') {
+      result = result.where((s) => s.status == _statusFilter).toList();
+    }
+
+    // Apply sort order
+    switch (_sortOrder) {
+      case 'oldest':
+        result.sort((a, b) => a.updatedAt.compareTo(b.updatedAt));
+        break;
+      case 'alpha':
+        result.sort(
+            (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+        break;
+      case 'recent':
+      default:
+        result.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+        break;
+    }
+
+    return result;
+  }
+
+  // ─────────────────── Filter & Sort ───────────────────
+
+  /// Set status filter and notify listeners.
+  void setStatusFilter(String filter) {
+    _statusFilter = filter;
+    notifyListeners();
+  }
+
+  /// Set sort order and notify listeners.
+  void setSortOrder(String order) {
+    _sortOrder = order;
+    notifyListeners();
+  }
+
+  /// Clear any error message.
+  void clearError() {
+    _error = null;
+    notifyListeners();
+  }
 
   // ─────────────────── Stories ───────────────────
 
   /// Load all stories for the current user.
   Future<void> loadStories() async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
 
     try {
       _stories = await _repo.getAllStories();
     } catch (e) {
+      _error = 'Failed to load stories. Pull down to retry.';
       debugPrint('[StoryProvider] loadStories error: $e');
     }
 
@@ -44,6 +104,7 @@ class StoryProvider extends ChangeNotifier {
   Future<void> searchStories(String query) async {
     _searchQuery = query;
     _isLoading = true;
+    _error = null;
     notifyListeners();
 
     try {
@@ -51,6 +112,7 @@ class StoryProvider extends ChangeNotifier {
           ? await _repo.getAllStories()
           : await _repo.searchStories(query);
     } catch (e) {
+      _error = 'Search failed. Please try again.';
       debugPrint('[StoryProvider] searchStories error: $e');
     }
 
@@ -117,11 +179,16 @@ class StoryProvider extends ChangeNotifier {
 
   /// Load favorite stories for the current user.
   Future<void> loadFavorites() async {
+    _isLoadingFavorites = true;
+    notifyListeners();
+
     try {
       _favoriteStories = await _repo.getFavoriteStories();
     } catch (e) {
       debugPrint('[StoryProvider] loadFavorites error: $e');
     }
+
+    _isLoadingFavorites = false;
     notifyListeners();
   }
 

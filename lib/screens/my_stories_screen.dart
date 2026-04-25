@@ -33,108 +33,295 @@ class _MyStoriesScreenState extends State<MyStoriesScreen> {
     context.read<StoryProvider>().searchStories(value);
   }
 
+  Future<void> _onRefresh() async {
+    await context.read<StoryProvider>().triggerSync();
+  }
+
+  void _confirmDelete(BuildContext context, Story story) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Delete Story',
+          style: TextStyle(color: AppColors.foreground),
+        ),
+        content: Text(
+          'Are you sure you want to delete "${story.title}"? This action cannot be undone.',
+          style: const TextStyle(color: AppColors.mutedForeground),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.mutedForeground),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              context.read<StoryProvider>().deleteStory(story.id);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('"${story.title}" deleted'),
+                  backgroundColor: AppColors.primary,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              );
+            },
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Color(0xFFD4183D)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final storyProvider = context.watch<StoryProvider>();
-    final stories = storyProvider.stories;
+    final stories = storyProvider.filteredStories;
     final isLoading = storyProvider.isLoading;
+    final error = storyProvider.error;
+    final statusFilter = storyProvider.statusFilter;
+    final sortOrder = storyProvider.sortOrder;
+    final totalCount = storyProvider.stories.length;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'My Stories',
-                      style: TextStyle(
-                        fontSize: 28,
-                        color: AppColors.foreground,
-                        fontWeight: FontWeight.w400,
+        child: RefreshIndicator(
+          onRefresh: _onRefresh,
+          color: AppColors.accent,
+          backgroundColor: AppColors.card,
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                // ── Header Row ──
+                Row(
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          const Text(
+                            'My Stories',
+                            style: TextStyle(
+                              fontSize: 28,
+                              color: AppColors.foreground,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          if (totalCount > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color:
+                                    const Color.fromRGBO(200, 162, 124, 0.15),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '$totalCount',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: AppColors.accent,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                  ),
-                  _ViewToggleButton(
-                    icon: Icons.grid_view,
-                    isActive: _isGridView,
-                    onTap: () => setState(() => _isGridView = true),
-                  ),
-                  const SizedBox(width: 8),
-                  _ViewToggleButton(
-                    icon: Icons.list,
-                    isActive: !_isGridView,
-                    onTap: () => setState(() => _isGridView = false),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _searchController,
-                onChanged: _onSearchChanged,
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(
-                    Icons.search,
-                    color: AppColors.mutedForeground,
-                  ),
-                  hintText: 'Search stories...',
+                    _ViewToggleButton(
+                      icon: Icons.grid_view,
+                      isActive: _isGridView,
+                      onTap: () => setState(() => _isGridView = true),
+                    ),
+                    const SizedBox(width: 8),
+                    _ViewToggleButton(
+                      icon: Icons.list,
+                      isActive: !_isGridView,
+                      onTap: () => setState(() => _isGridView = false),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 20),
-              Expanded(
-                child: isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          valueColor:
-                              AlwaysStoppedAnimation(AppColors.accent),
+                const SizedBox(height: 16),
+
+                // ── Search Bar ──
+                TextFormField(
+                  controller: _searchController,
+                  onChanged: _onSearchChanged,
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: AppColors.mutedForeground,
+                    ),
+                    hintText: 'Search stories...',
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // ── Filter Chips ──
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _FilterChip(
+                        label: 'All',
+                        isSelected: statusFilter == 'all',
+                        onTap: () =>
+                            storyProvider.setStatusFilter('all'),
+                      ),
+                      const SizedBox(width: 8),
+                      _FilterChip(
+                        label: 'Draft',
+                        isSelected: statusFilter == 'draft',
+                        onTap: () =>
+                            storyProvider.setStatusFilter('draft'),
+                      ),
+                      const SizedBox(width: 8),
+                      _FilterChip(
+                        label: 'Published',
+                        isSelected: statusFilter == 'published',
+                        onTap: () =>
+                            storyProvider.setStatusFilter('published'),
+                      ),
+                      const SizedBox(width: 16),
+                      // Sort dropdown
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 0),
+                        decoration: BoxDecoration(
+                          color: AppColors.card,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.border),
                         ),
-                      )
-                    : stories.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.menu_book_outlined,
-                                  size: 64,
-                                  color: AppColors.mutedForeground
-                                      .withOpacity(0.4),
-                                ),
-                                const SizedBox(height: 16),
-                                const Text(
-                                  'No stories found',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    color: AppColors.mutedForeground,
-                                  ),
-                                ),
-                              ],
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: sortOrder,
+                            icon: const Icon(Icons.sort,
+                                size: 18, color: AppColors.mutedForeground),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.foreground,
+                              fontFamily: 'Georgia',
                             ),
-                          )
-                        : _isGridView
-                            ? _GridView(stories: stories)
-                            : _ListView(stories: stories),
-              ),
-            ],
+                            dropdownColor: AppColors.card,
+                            borderRadius: BorderRadius.circular(12),
+                            items: const [
+                              DropdownMenuItem(
+                                  value: 'recent', child: Text('Recent')),
+                              DropdownMenuItem(
+                                  value: 'oldest', child: Text('Oldest')),
+                              DropdownMenuItem(
+                                  value: 'alpha', child: Text('A–Z')),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) {
+                                storyProvider.setSortOrder(value);
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // ── Content Area ──
+                Expanded(
+                  child: error != null
+                      ? _ErrorWidget(
+                          message: error,
+                          onRetry: () {
+                            storyProvider.clearError();
+                            storyProvider.loadStories();
+                          },
+                        )
+                      : isLoading
+                          ? const Center(
+                              child: CircularProgressIndicator(
+                                valueColor:
+                                    AlwaysStoppedAnimation(AppColors.accent),
+                              ),
+                            )
+                          : stories.isEmpty
+                              ? Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.menu_book_outlined,
+                                        size: 64,
+                                        color: AppColors.mutedForeground
+                                            .withValues(alpha: 102),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        storyProvider.searchQuery.isNotEmpty
+                                            ? 'No stories match your search'
+                                            : statusFilter != 'all'
+                                                ? 'No $statusFilter stories'
+                                                : 'No stories found',
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          color: AppColors.mutedForeground,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        storyProvider.searchQuery.isNotEmpty
+                                            ? 'Try a different keyword'
+                                            : 'Tap + to create your first story',
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          color: AppColors.mutedForeground,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : _isGridView
+                                  ? _StoryGridView(
+                                      stories: stories,
+                                      onDelete: _confirmDelete,
+                                    )
+                                  : _StoryListView(
+                                      stories: stories,
+                                      onDelete: _confirmDelete,
+                                    ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
+          final provider = context.read<StoryProvider>();
           await context.push('/app/create');
           if (mounted) {
-            context.read<StoryProvider>().loadStories();
+            provider.loadStories();
           }
         },
         backgroundColor: AppColors.accent,
+        elevation: 4,
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
 }
+
+// ─────────────────── View Toggle ───────────────────
 
 class _ViewToggleButton extends StatelessWidget {
   final IconData icon;
@@ -151,7 +338,8 @@ class _ViewToggleButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: isActive ? AppColors.accent : AppColors.card,
@@ -168,10 +356,53 @@ class _ViewToggleButton extends StatelessWidget {
   }
 }
 
-class _GridView extends StatelessWidget {
-  final List<Story> stories;
+// ─────────────────── Filter Chip ───────────────────
 
-  const _GridView({required this.stories});
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _FilterChip({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.accent : AppColors.card,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? AppColors.accent : AppColors.border,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            color: isSelected ? Colors.white : AppColors.foreground,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────── Grid View ───────────────────
+
+class _StoryGridView extends StatelessWidget {
+  final List<Story> stories;
+  final void Function(BuildContext, Story) onDelete;
+
+  const _StoryGridView({required this.stories, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -180,88 +411,124 @@ class _GridView extends StatelessWidget {
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 0.75,
+        childAspectRatio: 0.7,
       ),
       itemCount: stories.length,
       itemBuilder: (context, index) {
         final story = stories[index];
-        return GestureDetector(
-          onTap: () async {
-            await context.push('/app/story/${story.id}');
-            if (context.mounted) {
-              context.read<StoryProvider>().loadStories();
-            }
+        return TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: Duration(milliseconds: 300 + (index * 50)),
+          curve: Curves.easeOut,
+          builder: (context, value, child) {
+            return Opacity(
+              opacity: value,
+              child: Transform.scale(
+                scale: 0.9 + (0.1 * value),
+                child: child,
+              ),
+            );
           },
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: StoryCover(
-                    colors: story.coverColors,
-                    width: double.infinity,
-                    height: double.infinity,
-                    borderRadius: 14,
+          child: GestureDetector(
+            onTap: () async {
+              await context.push('/app/story/${story.id}');
+              if (context.mounted) {
+                context.read<StoryProvider>().loadStories();
+              }
+            },
+            onLongPress: () => onDelete(context, story),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.card,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color.fromRGBO(141, 110, 99, 0.06),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        story.title,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppColors.foreground,
-                          fontWeight: FontWeight.w500,
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        StoryCover(
+                          colors: story.coverColors,
+                          width: double.infinity,
+                          height: double.infinity,
+                          borderRadius: 14,
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Text(
-                            '${story.pageCount} pages',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.mutedForeground,
-                            ),
-                          ),
-                          if (!story.isSynced) ...[
-                            const SizedBox(width: 4),
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: const BoxDecoration(
-                                color: AppColors.accent,
+                        // Favorite indicator
+                        if (story.isFavorite)
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color:
+                                    const Color.fromRGBO(255, 255, 255, 0.9),
                                 shape: BoxShape.circle,
                               ),
+                              child: const Icon(
+                                Icons.favorite,
+                                color: AppColors.accent,
+                                size: 14,
+                              ),
                             ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        story.status,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: story.status == 'published'
-                              ? AppColors.accent
-                              : AppColors.mutedForeground,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          story.title,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppColors.foreground,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Text(
+                              '${story.pageCount} pages',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.mutedForeground,
+                              ),
+                            ),
+                            if (!story.isSynced) ...[
+                              const SizedBox(width: 4),
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.accent,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        _StatusBadge(status: story.status),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -270,10 +537,13 @@ class _GridView extends StatelessWidget {
   }
 }
 
-class _ListView extends StatelessWidget {
-  final List<Story> stories;
+// ─────────────────── List View ───────────────────
 
-  const _ListView({required this.stories});
+class _StoryListView extends StatelessWidget {
+  final List<Story> stories;
+  final void Function(BuildContext, Story) onDelete;
+
+  const _StoryListView({required this.stories, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -282,81 +552,202 @@ class _ListView extends StatelessWidget {
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final story = stories[index];
-        return GestureDetector(
-          onTap: () async {
-            await context.push('/app/story/${story.id}');
-            if (context.mounted) {
-              context.read<StoryProvider>().loadStories();
-            }
+        return Dismissible(
+          key: ValueKey(story.id),
+          direction: DismissDirection.endToStart,
+          confirmDismiss: (_) async {
+            onDelete(context, story);
+            return false; // Dialog handles the delete
           },
-          child: Container(
+          background: Container(
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 24),
             decoration: BoxDecoration(
-              color: AppColors.card,
+              color: const Color.fromRGBO(212, 24, 61, 0.1),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.border),
             ),
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                StoryCover(colors: story.coverColors),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        story.title,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: AppColors.foreground,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${story.pageCount} pages · ${story.lastEditedDisplay}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppColors.mutedForeground,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
+            child: const Icon(Icons.delete_outline,
+                color: Color(0xFFD4183D), size: 28),
+          ),
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: Duration(milliseconds: 300 + (index * 50)),
+            curve: Curves.easeOut,
+            builder: (context, value, child) {
+              return Opacity(
+                opacity: value,
+                child: Transform.translate(
+                  offset: Offset(30 * (1 - value), 0),
+                  child: child,
+                ),
+              );
+            },
+            child: GestureDetector(
+              onTap: () async {
+                await context.push('/app/story/${story.id}');
+                if (context.mounted) {
+                  context.read<StoryProvider>().loadStories();
+                }
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.border),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color.fromRGBO(141, 110, 99, 0.06),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    StoryCover(colors: story.coverColors),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            story.status,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: story.status == 'published'
-                                  ? AppColors.accent
-                                  : AppColors.mutedForeground,
-                              fontWeight: FontWeight.w500,
+                            story.title,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: AppColors.foreground,
                             ),
                           ),
-                          if (!story.isSynced) ...[
-                            const SizedBox(width: 4),
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: const BoxDecoration(
-                                color: AppColors.accent,
-                                shape: BoxShape.circle,
-                              ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${story.pageCount} pages · ${story.lastEditedDisplay}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: AppColors.mutedForeground,
                             ),
-                          ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              _StatusBadge(status: story.status),
+                              if (!story.isSynced) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.accent,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ],
+                              if (story.isFavorite) ...[
+                                const SizedBox(width: 8),
+                                const Icon(Icons.favorite,
+                                    color: AppColors.accent, size: 14),
+                              ],
+                            ],
+                          ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                    GestureDetector(
+                      onTap: () =>
+                          context.read<StoryProvider>().toggleFavorite(story.id),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Icon(
+                          story.isFavorite
+                              ? Icons.favorite
+                              : Icons.favorite_border,
+                          color: story.isFavorite
+                              ? AppColors.accent
+                              : AppColors.mutedForeground,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right,
+                      color: AppColors.mutedForeground,
+                    ),
+                  ],
                 ),
-                const Icon(
-                  Icons.chevron_right,
-                  color: AppColors.mutedForeground,
-                ),
-              ],
+              ),
             ),
           ),
         );
       },
+    );
+  }
+}
+
+// ─────────────────── Status Badge ───────────────────
+
+class _StatusBadge extends StatelessWidget {
+  final String status;
+
+  const _StatusBadge({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final isPublished = status == 'published';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: isPublished
+            ? const Color.fromRGBO(200, 162, 124, 0.15)
+            : const Color.fromRGBO(141, 110, 99, 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        status[0].toUpperCase() + status.substring(1),
+        style: TextStyle(
+          fontSize: 11,
+          color: isPublished ? AppColors.accent : AppColors.mutedForeground,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────── Error Widget ───────────────────
+
+class _ErrorWidget extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _ErrorWidget({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline,
+              size: 48, color: Color(0xFFD4183D)),
+          const SizedBox(height: 16),
+          Text(
+            message,
+            style: const TextStyle(
+              fontSize: 16,
+              color: AppColors.mutedForeground,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh, size: 18),
+            label: const Text('Retry'),
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size(120, 44),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
