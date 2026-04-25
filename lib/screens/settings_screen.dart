@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
+import '../providers/auth_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -114,7 +116,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       width: double.infinity,
                       height: 56,
                       child: OutlinedButton.icon(
-                        onPressed: () => context.go('/welcome'),
+                        onPressed: () async {
+                          await context.read<AuthProvider>().signOut();
+                          if (mounted) context.go('/welcome');
+                        },
                         icon: const Icon(Icons.logout, size: 20),
                         label: const Text('Log Out'),
                         style: OutlinedButton.styleFrom(

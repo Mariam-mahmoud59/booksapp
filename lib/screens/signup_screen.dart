@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
-import '../services/supabase_service.dart';
-import '../models/profile.dart';
-import '../services/database_helper.dart';
-import '../repositories/story_repository.dart';
+import '../providers/auth_provider.dart';
+import '../providers/story_provider.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -17,8 +16,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isLoading = false;
-  String? _error;
 
   @override
   void dispose() {
@@ -34,65 +31,34 @@ class _SignUpScreenState extends State<SignUpScreen> {
     final password = _passwordController.text.trim();
 
     if (name.isEmpty || email.isEmpty || password.isEmpty) {
-      setState(() => _error = 'Please fill in all fields');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill in all fields')),
+      );
       return;
     }
 
     if (password.length < 6) {
-      setState(() => _error = 'Password must be at least 6 characters');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Password must be at least 6 characters')),
+      );
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+    final authProvider = context.read<AuthProvider>();
+    final success = await authProvider.signUp(name, email, password);
 
-    try {
-      final response = await SupabaseService().signUp(email, password);
-      final userId = response.user?.id;
-
-      if (userId != null) {
-        // Create local profile
-        final now = DateTime.now();
-        await DatabaseHelper().insertProfile(Profile(
-          id: userId,
-          username: name,
-          createdAt: now,
-          updatedAt: now,
-        ));
-
-        // Seed data for this user
-        await StoryRepository().seedIfNeeded();
-
-        // Trigger initial sync to push profile to Supabase
-        await DatabaseHelper().enqueueSyncOperation(
-          tableName: 'profiles',
-          recordId: userId,
-          operation: 'INSERT',
-          payload: {
-            'id': userId,
-            'username': name,
-            'created_at': now.toIso8601String(),
-            'updated_at': now.toIso8601String(),
-          },
-        );
-        StoryRepository().triggerSync();
-      }
-
-      if (mounted) context.go('/app');
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = 'Sign up failed. Please try again.';
-          _isLoading = false;
-        });
-      }
+    if (success && mounted) {
+      // Reload stories for the newly created user
+      context.read<StoryProvider>().loadStories();
+      context.go('/app');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -136,7 +102,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                     ),
                     const SizedBox(height: 48),
-                    if (_error != null) ...[
+                    if (authProvider.error != null) ...[
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -150,7 +116,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                _error!,
+                                authProvider.error!,
                                 style: const TextStyle(
                                     color: Color(0xFFD4183D), fontSize: 14),
                               ),
@@ -217,8 +183,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       width: double.infinity,
                       height: 56,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _handleSignUp,
-                        child: _isLoading
+                        onPressed:
+                            authProvider.isLoading ? null : _handleSignUp,
+                        child: authProvider.isLoading
                             ? const SizedBox(
                                 height: 20,
                                 width: 20,

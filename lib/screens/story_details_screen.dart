@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/story.dart';
-import '../repositories/story_repository.dart';
+import '../providers/story_provider.dart';
 
 class StoryDetailsScreen extends StatefulWidget {
   final String storyId;
@@ -14,7 +15,6 @@ class StoryDetailsScreen extends StatefulWidget {
 }
 
 class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
-  final StoryRepository _repo = StoryRepository();
   Story? _story;
   bool _isLoading = true;
 
@@ -25,7 +25,8 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
   }
 
   Future<void> _loadStory() async {
-    final story = await _repo.getStory(widget.storyId);
+    final story =
+        await context.read<StoryProvider>().getStory(widget.storyId);
     if (mounted) {
       setState(() {
         _story = story;
@@ -36,14 +37,15 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
 
   Future<void> _toggleFavorite() async {
     if (_story == null) return;
-    final newState = await _repo.toggleFavorite(_story!.id);
+    final newState =
+        await context.read<StoryProvider>().toggleFavorite(_story!.id);
     setState(() {
       _story = _story!.copyWith(isFavorite: newState);
     });
   }
 
   Future<void> _deleteStory() async {
-    await _repo.deleteStory(widget.storyId);
+    await context.read<StoryProvider>().deleteStory(widget.storyId);
     if (mounted) context.go('/app');
   }
 

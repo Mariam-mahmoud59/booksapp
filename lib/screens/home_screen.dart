@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/story.dart';
 import '../widgets/story_cover.dart';
-import '../repositories/story_repository.dart';
+import '../providers/story_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,24 +14,11 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final StoryRepository _repo = StoryRepository();
-  List<Story> _recentStories = [];
-  bool _isLoading = true;
-
   @override
   void initState() {
     super.initState();
-    _loadStories();
-  }
-
-  Future<void> _loadStories() async {
-    final stories = await _repo.getAllStories();
-    if (mounted) {
-      setState(() {
-        _recentStories = stories.take(2).toList();
-        _isLoading = false;
-      });
-    }
+    // Ensure stories are loaded when screen is shown
+    context.read<StoryProvider>().loadStories();
   }
 
   String _getGreeting() {
@@ -42,6 +30,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final storyProvider = context.watch<StoryProvider>();
+    final recentStories = storyProvider.recentStories;
+    final isLoading = storyProvider.isLoading;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -126,7 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          if (_isLoading)
+          if (isLoading)
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(32),
@@ -135,7 +127,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             )
-          else if (_recentStories.isEmpty)
+          else if (recentStories.isEmpty)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(24),
@@ -153,13 +145,15 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             )
           else
-            ..._recentStories.map((story) {
+            ...recentStories.map((story) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: GestureDetector(
                   onTap: () async {
                     await context.push('/app/story/${story.id}');
-                    _loadStories(); // Refresh after returning
+                    if (mounted) {
+                      context.read<StoryProvider>().loadStories();
+                    }
                   },
                   child: Container(
                     decoration: BoxDecoration(
