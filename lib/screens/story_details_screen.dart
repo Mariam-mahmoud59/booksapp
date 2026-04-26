@@ -17,6 +17,9 @@ class StoryDetailsScreen extends StatefulWidget {
 class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
   Story? _story;
   bool _isLoading = true;
+  bool _isDeleting = false;
+  int _wordCount = 0;
+  String? _error;
 
   @override
   void initState() {
@@ -25,28 +28,75 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
   }
 
   Future<void> _loadStory() async {
-    final story =
-        await context.read<StoryProvider>().getStory(widget.storyId);
-    if (mounted) {
-      setState(() {
-        _story = story;
-        _isLoading = false;
-      });
+    final provider = context.read<StoryProvider>();
+    try {
+      final story = await provider.getStory(widget.storyId);
+      int words = 0;
+      if (story != null) {
+        words = await provider.getStoryWordCount(widget.storyId);
+      }
+      if (mounted) {
+        setState(() {
+          _story = story;
+          _wordCount = words;
+          _isLoading = false;
+          _error = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _error = 'Failed to load story';
+        });
+      }
     }
   }
 
   Future<void> _toggleFavorite() async {
     if (_story == null) return;
-    final newState =
-        await context.read<StoryProvider>().toggleFavorite(_story!.id);
-    setState(() {
-      _story = _story!.copyWith(isFavorite: newState);
-    });
+    try {
+      final newState =
+          await context.read<StoryProvider>().toggleFavorite(_story!.id);
+      setState(() {
+        _story = _story!.copyWith(isFavorite: newState);
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Failed to update favorite'),
+            backgroundColor: const Color(0xFFD4183D),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _deleteStory() async {
-    await context.read<StoryProvider>().deleteStory(widget.storyId);
-    if (mounted) context.go('/app');
+    if (_isDeleting) return;
+    setState(() => _isDeleting = true);
+
+    try {
+      await context.read<StoryProvider>().deleteStory(widget.storyId);
+      if (mounted) context.go('/app');
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isDeleting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Failed to delete story'),
+            backgroundColor: const Color(0xFFD4183D),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -62,20 +112,23 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
       );
     }
 
-    final story = _story;
-    if (story == null) {
+    if (_error != null || _story == null) {
       return Scaffold(
         backgroundColor: AppColors.background,
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('Story not found',
-                  style: TextStyle(color: AppColors.mutedForeground)),
+              const Icon(Icons.error_outline,
+                  size: 48, color: AppColors.mutedForeground),
               const SizedBox(height: 16),
-              TextButton(
+              Text(_error ?? 'Story not found',
+                  style: const TextStyle(color: AppColors.mutedForeground)),
+              const SizedBox(height: 16),
+              TextButton.icon(
                 onPressed: () => context.go('/app'),
-                child: const Text('Go Home'),
+                icon: const Icon(Icons.home_outlined),
+                label: const Text('Go Home'),
               ),
             ],
           ),
@@ -83,16 +136,19 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
       );
     }
 
+    final story = _story!;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ─── Cover Gradient Header ───
             Stack(
               children: [
                 Container(
-                  height: 256,
+                  height: 280,
                   width: double.infinity,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -101,17 +157,25 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
                       colors: story.coverColors,
                     ),
                   ),
+                  child: Center(
+                    child: Icon(
+                      Icons.auto_stories_rounded,
+                      size: 64,
+                      color: Colors.white.withValues(alpha: 0.25),
+                    ),
+                  ),
                 ),
+                // Back button
                 Positioned(
-                  top: MediaQuery.of(context).padding.top + 16,
-                  left: 16,
+                  top: MediaQuery.of(context).padding.top + 12,
+                  left: 12,
                   child: GestureDetector(
                     onTap: () => context.go('/app'),
                     child: Container(
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.2),
+                        color: Colors.black.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -122,35 +186,72 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
                     ),
                   ),
                 ),
+                // Favorite button
                 Positioned(
-                  top: MediaQuery.of(context).padding.top + 16,
-                  right: 16,
+                  top: MediaQuery.of(context).padding.top + 12,
+                  right: 12,
                   child: GestureDetector(
                     onTap: _toggleFavorite,
                     child: Container(
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.2),
+                        color: Colors.black.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(
-                        story.isFavorite
-                            ? Icons.favorite
-                            : Icons.favorite_border,
-                        color: Colors.white,
-                        size: 22,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        transitionBuilder: (child, animation) =>
+                            ScaleTransition(
+                                scale: animation, child: child),
+                        child: Icon(
+                          story.isFavorite
+                              ? Icons.favorite
+                              : Icons.favorite_border,
+                          key: ValueKey(story.isFavorite),
+                          color: story.isFavorite
+                              ? const Color(0xFFFF6B6B)
+                              : Colors.white,
+                          size: 22,
+                        ),
                       ),
                     ),
                   ),
                 ),
+                // Status badge
+                if (story.status.isNotEmpty)
+                  Positioned(
+                    top: MediaQuery.of(context).padding.top + 16,
+                    right: 64,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        story.status[0].toUpperCase() +
+                            story.status.substring(1),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
+
+            // ─── Details Section ───
             Padding(
               padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Title + sync badge
                   Row(
                     children: [
                       Expanded(
@@ -168,7 +269,8 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppColors.accent.withOpacity(0.15),
+                            color:
+                                AppColors.accent.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Row(
@@ -186,6 +288,8 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
                         ),
                     ],
                   ),
+
+                  // Description
                   if (story.description != null &&
                       story.description!.isNotEmpty) ...[
                     const SizedBox(height: 8),
@@ -194,28 +298,59 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
                       style: const TextStyle(
                         fontSize: 14,
                         color: AppColors.mutedForeground,
+                        height: 1.5,
                       ),
                     ),
                   ],
+
                   const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      _StatItem(
-                        value: '${story.pageCount}',
-                        label: 'Pages',
-                      ),
-                      _StatItem(
-                        value: story.status,
-                        label: 'Status',
-                      ),
-                      if (story.genre != null)
+
+                  // Stats row
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.card,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      children: [
                         _StatItem(
-                          value: story.genre!,
-                          label: 'Genre',
+                          value: '${story.pageCount}',
+                          label: 'Pages',
+                          icon: Icons.description_outlined,
                         ),
-                    ],
+                        Container(
+                          width: 1,
+                          height: 32,
+                          color: AppColors.border,
+                        ),
+                        _StatItem(
+                          value: _wordCount > 999
+                              ? '${(_wordCount / 1000).toStringAsFixed(1)}k'
+                              : '$_wordCount',
+                          label: 'Words',
+                          icon: Icons.text_fields,
+                        ),
+                        if (story.genre != null) ...[
+                          Container(
+                            width: 1,
+                            height: 32,
+                            color: AppColors.border,
+                          ),
+                          _StatItem(
+                            value: story.genre!,
+                            label: 'Genre',
+                            icon: Icons.category_outlined,
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 24),
+
+                  const SizedBox(height: 20),
+
+                  // Info rows
                   _InfoRow(
                     icon: Icons.access_time,
                     text: 'Last edited ${story.lastEditedDisplay}',
@@ -226,7 +361,10 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
                     text:
                         'Created ${story.createdAt.month}/${story.createdAt.day}/${story.createdAt.year}',
                   ),
+
                   const SizedBox(height: 32),
+
+                  // Primary actions
                   SizedBox(
                     width: double.infinity,
                     height: 56,
@@ -236,7 +374,8 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
                             .push('/app/story/${story.id}/read');
                         _loadStory();
                       },
-                      icon: const Icon(Icons.menu_book_rounded, size: 20),
+                      icon:
+                          const Icon(Icons.menu_book_rounded, size: 20),
                       label: const Text('Read Story'),
                     ),
                   ),
@@ -254,16 +393,21 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
                       label: const Text('Edit Story'),
                     ),
                   ),
-                  const SizedBox(height: 24),
+
+                  const SizedBox(height: 28),
+
+                  // More options
                   const Text(
                     'MORE OPTIONS',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 11,
                       color: AppColors.mutedForeground,
-                      letterSpacing: 1,
+                      letterSpacing: 1.5,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 12),
+
                   _ActionButton(
                     icon: story.isFavorite
                         ? Icons.favorite
@@ -277,39 +421,27 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
                   _ActionButton(
                     icon: Icons.share_outlined,
                     label: 'Share Story',
-                    onTap: () {},
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content:
+                              const Text('Share coming soon!'),
+                          behavior: SnackBarBehavior.floating,
+                          backgroundColor: AppColors.primary,
+                          shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(12)),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 8),
                   _ActionButton(
                     icon: Icons.delete_outline,
                     label: 'Delete Story',
                     isDestructive: true,
-                    onTap: () {
-                      showDialog(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('Delete Story'),
-                          content: const Text(
-                              'Are you sure you want to delete this story? This cannot be undone.'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: const Text('Cancel'),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                Navigator.pop(ctx);
-                                _deleteStory();
-                              },
-                              style: TextButton.styleFrom(
-                                foregroundColor: const Color(0xFFD4183D),
-                              ),
-                              child: const Text('Delete'),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                    isLoading: _isDeleting,
+                    onTap: () => _showDeleteDialog(),
                   ),
                 ],
               ),
@@ -319,32 +451,71 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
       ),
     );
   }
+
+  void _showDeleteDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.card,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete Story',
+            style: TextStyle(color: AppColors.foreground)),
+        content: Text(
+          'Are you sure you want to delete "${_story?.title}"? This cannot be undone.',
+          style: const TextStyle(color: AppColors.mutedForeground, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel',
+                style: TextStyle(color: AppColors.mutedForeground)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _deleteStory();
+            },
+            style:
+                TextButton.styleFrom(foregroundColor: const Color(0xFFD4183D)),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _StatItem extends StatelessWidget {
   final String value;
   final String label;
+  final IconData icon;
 
-  const _StatItem({required this.value, required this.label});
+  const _StatItem(
+      {required this.value, required this.label, required this.icon});
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: Column(
         children: [
+          Icon(icon, size: 18, color: AppColors.accent),
+          const SizedBox(height: 6),
           Text(
             value,
             style: const TextStyle(
-              fontSize: 24,
-              color: AppColors.accent,
+              fontSize: 18,
+              color: AppColors.foreground,
               fontWeight: FontWeight.w500,
             ),
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(
             label,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 11,
               color: AppColors.mutedForeground,
             ),
           ),
@@ -383,12 +554,14 @@ class _ActionButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   final bool isDestructive;
+  final bool isLoading;
 
   const _ActionButton({
     required this.icon,
     required this.label,
     required this.onTap,
     this.isDestructive = false,
+    this.isLoading = false,
   });
 
   @override
@@ -397,7 +570,7 @@ class _ActionButton extends StatelessWidget {
         isDestructive ? const Color(0xFFD4183D) : AppColors.foreground;
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: isLoading ? null : onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -405,13 +578,23 @@ class _ActionButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isDestructive
-                ? const Color(0xFFD4183D).withOpacity(0.3)
+                ? const Color(0xFFD4183D).withValues(alpha: 0.3)
                 : AppColors.border,
           ),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: color),
+            if (isLoading)
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation(color),
+                ),
+              )
+            else
+              Icon(icon, size: 20, color: color),
             const SizedBox(width: 12),
             Text(
               label,
