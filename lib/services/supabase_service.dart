@@ -48,6 +48,11 @@ class SupabaseService {
     await client.auth.signOut();
   }
 
+  /// Reset password for email.
+  Future<void> resetPassword(String email) async {
+    await client.auth.resetPasswordForEmail(email);
+  }
+
   /// Listen to auth state changes.
   Stream<AuthState> get onAuthStateChange => client.auth.onAuthStateChange;
 
