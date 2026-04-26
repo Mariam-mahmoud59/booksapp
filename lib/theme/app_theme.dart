@@ -28,13 +28,13 @@ class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
-      colorScheme: ColorScheme(
+      colorScheme: const ColorScheme(
         brightness: Brightness.light,
         primary: AppColors.primary,
         onPrimary: AppColors.background,
         secondary: AppColors.secondary,
         onSecondary: AppColors.foreground,
-        error: const Color(0xFFD4183D),
+        error: Color(0xFFD4183D),
         onError: Colors.white,
         surface: AppColors.background,
         onSurface: AppColors.foreground,

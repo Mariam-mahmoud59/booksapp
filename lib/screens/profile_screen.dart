@@ -178,16 +178,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   color: AppColors.accent,
                   onTap: () async {
                     await context.read<StoryProvider>().triggerSync();
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Sync triggered'),
-                          duration: Duration(seconds: 1),
-                        ),
-                      );
-                      // Refresh stats after sync
-                      context.read<AuthProvider>().loadStats();
-                    }
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Sync triggered'),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                    // Refresh stats after sync
+                    context.read<AuthProvider>().loadStats();
                   },
                 ),
             ],
@@ -277,7 +276,7 @@ class _ActionItem extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.15),
+                color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, size: 22, color: color),

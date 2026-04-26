@@ -33,8 +33,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: const [
+              const Row(
+                children: [
                   Icon(Icons.favorite, size: 32, color: AppColors.accent),
                   SizedBox(width: 12),
                   Text(
@@ -65,7 +65,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                         Icon(
                           Icons.favorite_border,
                           size: 64,
-                          color: AppColors.mutedForeground.withOpacity(0.4),
+                          color: AppColors.mutedForeground.withValues(alpha: 0.4),
                         ),
                         const SizedBox(height: 16),
                         const Text(
@@ -98,9 +98,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                       return GestureDetector(
                         onTap: () async {
                           await context.push('/app/story/${story.id}');
-                          if (mounted) {
-                            context.read<StoryProvider>().loadFavorites();
-                          }
+                          if (!context.mounted) return;
+                          context.read<StoryProvider>().loadFavorites();
                         },
                         child: Container(
                           decoration: BoxDecoration(

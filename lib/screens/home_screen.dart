@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
-import '../models/story.dart';
 import '../widgets/story_cover.dart';
 import '../providers/story_provider.dart';
 
@@ -71,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.accent.withOpacity(0.3),
+                    color: AppColors.accent.withValues(alpha: 0.3),
                     blurRadius: 16,
                     offset: const Offset(0, 6),
                   ),
@@ -84,7 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.add, size: 32, color: Colors.white),
@@ -103,8 +102,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 32),
-          Row(
-            children: const [
+          const Row(
+            children: [
               Icon(Icons.access_time,
                   size: 20, color: AppColors.mutedForeground),
               SizedBox(width: 8),
@@ -132,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: AppColors.secondary.withOpacity(0.5),
+                color: AppColors.secondary.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: const Text(
@@ -151,9 +150,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: GestureDetector(
                   onTap: () async {
                     await context.push('/app/story/${story.id}');
-                    if (mounted) {
-                      context.read<StoryProvider>().loadStories();
-                    }
+                    if (!context.mounted) return;
+                    context.read<StoryProvider>().loadStories();
                   },
                   child: Container(
                     decoration: BoxDecoration(
@@ -217,8 +215,8 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             }),
           const SizedBox(height: 24),
-          Row(
-            children: const [
+          const Row(
+            children: [
               Icon(Icons.auto_awesome,
                   size: 20, color: AppColors.mutedForeground),
               SizedBox(width: 8),
@@ -236,7 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: AppColors.secondary.withOpacity(0.5),
+              color: AppColors.secondary.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(16),
             ),
             child: const Text(

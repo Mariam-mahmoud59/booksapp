@@ -101,7 +101,7 @@ class _MyStoriesScreenState extends State<MyStoriesScreen> {
                                   Icons.menu_book_outlined,
                                   size: 64,
                                   color: AppColors.mutedForeground
-                                      .withOpacity(0.4),
+                                      .withValues(alpha: 0.4),
                                 ),
                                 const SizedBox(height: 16),
                                 const Text(
@@ -125,9 +125,8 @@ class _MyStoriesScreenState extends State<MyStoriesScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           await context.push('/app/create');
-          if (mounted) {
-            context.read<StoryProvider>().loadStories();
-          }
+          if (!context.mounted) return;
+          context.read<StoryProvider>().loadStories();
         },
         backgroundColor: AppColors.accent,
         child: const Icon(Icons.add, color: Colors.white),
