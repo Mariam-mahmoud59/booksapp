@@ -16,9 +16,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    final authProvider = context.read<AuthProvider>();
-    authProvider.loadProfile();
-    authProvider.loadStats();
+    Future.microtask(() {
+      if (mounted) {
+        final authProvider = context.read<AuthProvider>();
+        authProvider.loadProfile();
+        authProvider.loadStats();
+      }
+    });
   }
 
   String _formatWordCount(int count) {

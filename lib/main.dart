@@ -49,8 +49,16 @@ class StoryBookCreatorApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()..checkAuthState()),
-        ChangeNotifierProvider(create: (_) => StoryProvider()..loadStories()),
+        ChangeNotifierProvider(create: (_) {
+          final provider = AuthProvider();
+          Future.microtask(() => provider.checkAuthState());
+          return provider;
+        }),
+        ChangeNotifierProvider(create: (_) {
+          final provider = StoryProvider();
+          Future.microtask(() => provider.loadStories());
+          return provider;
+        }),
       ],
       child: MaterialApp.router(
         title: 'Story Book Creator',

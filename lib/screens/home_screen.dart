@@ -29,7 +29,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    context.read<StoryProvider>().loadStories();
+    // Ensure stories are loaded when screen is shown
+    Future.microtask(() => context.read<StoryProvider>().loadStories());
 
     _currentTipIndex = Random().nextInt(_writingTips.length);
 

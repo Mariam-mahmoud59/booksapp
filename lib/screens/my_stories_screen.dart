@@ -20,7 +20,7 @@ class _MyStoriesScreenState extends State<MyStoriesScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<StoryProvider>().loadStories();
+    Future.microtask(() => context.read<StoryProvider>().loadStories());
   }
 
   @override

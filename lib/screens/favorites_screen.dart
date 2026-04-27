@@ -20,7 +20,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   @override
   void initState() {
     super.initState();
-    _loadFavorites();
+    Future.microtask(() => _loadFavorites());
   }
 
   Future<void> _loadFavorites() async {
