@@ -175,6 +175,19 @@ class StoryProvider extends ChangeNotifier {
     await _repo.deletePage(pageId);
   }
 
+  /// Get the total word count for a story by summing content across all pages.
+  Future<int> getStoryWordCount(String storyId) async {
+    final pages = await _repo.getStoryPages(storyId);
+    int total = 0;
+    for (final page in pages) {
+      final trimmed = page.content.trim();
+      if (trimmed.isNotEmpty) {
+        total += trimmed.split(RegExp(r'\s+')).length;
+      }
+    }
+    return total;
+  }
+
   // ─────────────────── Favorites ───────────────────
 
   /// Load favorite stories for the current user.

@@ -115,7 +115,7 @@ class _SplashScreenState extends State<SplashScreen>
                     'Creator',
                     style: TextStyle(
                       fontSize: 16,
-                      color: AppColors.primary.withOpacity(0.6),
+                      color: AppColors.primary.withValues(alpha: 0.6),
                     ),
                   ),
                 ),

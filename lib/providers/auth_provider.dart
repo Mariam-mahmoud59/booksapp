@@ -127,19 +127,7 @@ class AuthProvider extends ChangeNotifier {
     _favoriteCount = 0;
     notifyListeners();
   }
-  Future<void> resetPassword(String email) async {
-  _isLoading = true;
-  notifyListeners();
 
-  try {
-    await _supabase.resetPassword(email);
-  } catch (e) {
-    _error = 'Failed to send reset email';
-  }
-
-  _isLoading = false;
-  notifyListeners();
-}
   // ─────────────────── Profile ───────────────────
 
   /// Load the current user's profile from local DB.

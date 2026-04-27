@@ -52,7 +52,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _SectionLabel('APPEARANCE'),
+                    const _SectionLabel('APPEARANCE'),
                     const SizedBox(height: 12),
                     _SettingRow(
                       icon: Icons.dark_mode_outlined,
@@ -68,7 +68,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onTap: () {},
                     ),
                     const SizedBox(height: 24),
-                    _SectionLabel('SYNC'),
+                    const _SectionLabel('SYNC'),
                     const SizedBox(height: 12),
                     _SettingToggle(
                       icon: Icons.sync,
@@ -77,7 +77,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onChanged: (v) => setState(() => _autoSync = v),
                     ),
                     const SizedBox(height: 24),
-                    _SectionLabel('ACCOUNT'),
+                    const _SectionLabel('ACCOUNT'),
                     const SizedBox(height: 12),
                     _SettingRow(
                       icon: Icons.person_outline,
@@ -98,7 +98,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onTap: () {},
                     ),
                     const SizedBox(height: 24),
-                    _SectionLabel('OTHER'),
+                    const _SectionLabel('OTHER'),
                     const SizedBox(height: 12),
                     _SettingRow(
                       icon: Icons.info_outline,
@@ -118,7 +118,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       child: OutlinedButton.icon(
                         onPressed: () async {
                           await context.read<AuthProvider>().signOut();
-                          if (mounted) context.go('/welcome');
+                          if (!context.mounted) return;
+                          context.go('/welcome');
                         },
                         icon: const Icon(Icons.logout, size: 20),
                         label: const Text('Log Out'),
@@ -243,7 +244,7 @@ class _SettingToggle extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: AppColors.accent,
+            activeThumbColor: AppColors.accent,
           ),
         ],
       ),

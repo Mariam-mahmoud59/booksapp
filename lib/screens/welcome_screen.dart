@@ -21,14 +21,14 @@ class WelcomeScreen extends StatelessWidget {
             padding: const EdgeInsets.all(32),
             child: Column(
               children: [
-                Expanded(
+                const Expanded(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Stack(
                         clipBehavior: Clip.none,
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.menu_book_rounded,
                             size: 96,
                             color: AppColors.primary,
@@ -44,8 +44,8 @@ class WelcomeScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 32),
-                      const Text(
+                      SizedBox(height: 32),
+                      Text(
                         'Story Book Creator',
                         style: TextStyle(
                           fontSize: 32,
@@ -54,8 +54,8 @@ class WelcomeScreen extends StatelessWidget {
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 16),
-                      const Text(
+                      SizedBox(height: 16),
+                      Text(
                         'Your personal space for creating, writing, and managing beautiful stories',
                         style: TextStyle(
                           fontSize: 16,

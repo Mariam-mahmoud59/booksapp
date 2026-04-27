@@ -82,7 +82,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () => context.go('/welcome'),
-                  child: Text(
+                  child: const Text(
                     'Skip',
                     style: TextStyle(
                       color: AppColors.mutedForeground,
@@ -108,7 +108,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                             width: 128,
                             height: 128,
                             decoration: BoxDecoration(
-                              color: AppColors.secondary.withOpacity(0.5),
+                              color: AppColors.secondary.withValues(alpha: 0.5),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
