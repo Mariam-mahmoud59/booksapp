@@ -113,6 +113,15 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Send a password reset email.
+  Future<void> resetPassword(String email) async {
+    try {
+      await _supabase.resetPassword(email);
+    } catch (e) {
+      debugPrint('[AuthProvider] resetPassword error: $e');
+    }
+  }
+
   /// Sign out the current user.
   Future<void> signOut() async {
     try {

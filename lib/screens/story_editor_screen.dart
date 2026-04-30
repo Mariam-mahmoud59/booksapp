@@ -58,8 +58,9 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
   }
 
   Future<void> _loadStory() async {
-    final story = await _provider.getStory(widget.storyId);
-    final pages = await _provider.getStoryPages(widget.storyId);
+    try {
+      final story = await _provider.getStory(widget.storyId);
+      final pages = await _provider.getStoryPages(widget.storyId);
 
       if (mounted) {
         setState(() {
@@ -97,8 +98,8 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
   StoryPage? get _activePage =>
       _pages.where((p) => p.id == _activePageId).firstOrNull;
 
-  Future<void> _addPage() async {
-    final page = await _provider.addPage(widget.storyId);
+  void _updateWordCount() {
+    final text = _contentController.text.trim();
     setState(() {
       _wordCount = text.isEmpty ? 0 : text.split(RegExp(r'\s+')).length;
     });
@@ -144,13 +145,14 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
 
     setState(() => _isSyncing = true);
 
-    await Future.delayed(const Duration(milliseconds: 500));
-    if (page.content == content) {
-      await _provider.updatePage(page.copyWith(
-        content: content,
-        updatedAt: DateTime.now(),
-      ));
-      page.content = content;
+    try {
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (page.content != content) {
+        await _provider.updatePage(page.copyWith(
+          content: content,
+          updatedAt: DateTime.now(),
+        ));
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -177,6 +179,21 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
     _story = _story!.copyWith(title: title);
   }
 
+  Future<void> _updateDescription() async {
+    if (_story == null) return;
+    final description = _descriptionController.text.trim();
+    await _provider.updateStory(_story!.copyWith(description: description));
+    _story = _story!.copyWith(description: description);
+  }
+
+  Future<void> _updateGenre(String? genre) async {
+    setState(() => _selectedGenre = genre);
+    if (_story == null) return;
+    await _provider
+        .updateStory(_story!.copyWith(genre: genre?.toLowerCase()));
+    _story = _story!.copyWith(genre: genre?.toLowerCase());
+  }
+
   Future<void> _deletePage(String pageId) async {
     if (_pages.length > 1) {
       await _provider.deletePage(pageId);
@@ -186,7 +203,7 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
           _activePageId = _pages.first.id;
           _contentController.text = _activePage?.content ?? '';
         }
-      }
+      });
     }
   }
 

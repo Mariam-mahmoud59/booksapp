@@ -10,12 +10,12 @@ class Story {
   final String? description;
   final String? coverImageUrl;
   final String? genre;
-  final String status; // 'draft', 'published', 'archived'
+  final String status;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? deletedAt;
-  final bool isSynced;
-  final bool isDirty;
+  final bool isSynced; //isSynced = البيانات اتبعتت للسيرفر ولا لا
+  final bool isDirty; //isDirty = البيانات اتغيرت ولا لا
 
   // Computed / UI-convenience (not stored in stories table)
   final List<Color> coverColors;
@@ -41,7 +41,8 @@ class Story {
   });
 
   /// Deserialize from SQLite row.
-  factory Story.fromMap(Map<String, dynamic> map, {
+  factory Story.fromMap(
+    Map<String, dynamic> map, {
     List<Color>? coverColors,
     int pageCount = 0,
     bool isFavorite = false,

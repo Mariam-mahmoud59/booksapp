@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:story_book_creator/models/story.dart';
 import '../theme/app_theme.dart';
 import '../widgets/story_cover.dart';
 import '../providers/story_provider.dart';
@@ -233,7 +234,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                   ),
                   Spacer(),
-                  Icon(Icons.refresh, size: 16, color: AppColors.mutedForeground),
+                  Icon(Icons.refresh,
+                      size: 16, color: AppColors.mutedForeground),
                 ],
               ),
             ),

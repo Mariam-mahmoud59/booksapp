@@ -165,23 +165,26 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 12),
                     TextButton(
                       onPressed: () async {
-  final email = _emailController.text.trim();
+                        final email = _emailController.text.trim();
 
-  if (email.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Enter your email first')),
-    );
-    return;
-  }
+                        if (email.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Enter your email first')),
+                          );
+                          return;
+                        }
 
-  await context.read<AuthProvider>().resetPassword(email);
+                        final authProvider = context.read<AuthProvider>();
+                        final scaffoldMessenger = ScaffoldMessenger.of(context);
 
-  if (mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Password reset email sent')),
-    );
-  }
-},
+                        await authProvider.resetPassword(email);
+
+                        if (mounted) {
+                          scaffoldMessenger.showSnackBar(
+                            const SnackBar(content: Text('Password reset email sent')),
+                          );
+                        }
+                      },
                       style: TextButton.styleFrom(
                         padding: EdgeInsets.zero,
                         foregroundColor: AppColors.accent,

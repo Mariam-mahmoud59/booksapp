@@ -13,7 +13,8 @@ class StoryCreationScreen extends StatefulWidget {
   State<StoryCreationScreen> createState() => _StoryCreationScreenState();
 }
 
-class _StoryCreationScreenState extends State<StoryCreationScreen> {
+class _StoryCreationScreenState extends State<StoryCreationScreen>
+    with SingleTickerProviderStateMixin {
   StoryProvider get _provider => context.read<StoryProvider>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -80,7 +81,8 @@ class _StoryCreationScreenState extends State<StoryCreationScreen> {
 
     setState(() => _isCreating = true);
 
-    _createdStory = await _provider.createStory(title: title);
+    final title = _titleController.text.trim();
+    _createdStory = await _provider.createStory(title: title.isEmpty ? 'Untitled' : title);
 
     // Load the auto-created first page
     final pages = await _provider.getStoryPages(_createdStory!.id);
@@ -89,8 +91,9 @@ class _StoryCreationScreenState extends State<StoryCreationScreen> {
         _pages = pages;
         _activePageId = pages.isNotEmpty ? pages.first.id : null;
         if (_activePageId != null) {
-          _contentController?.text = _activePage?.content ?? '';
+          _contentController.text = _activePage?.content ?? '';
         }
+        _isCreating = false;
       });
     }
   }
@@ -104,7 +107,7 @@ class _StoryCreationScreenState extends State<StoryCreationScreen> {
       _pages.add(page);
       _activePageId = page.id;
     });
-    _contentController?.text = '';
+    _contentController.text = '';
   }
 
   void _onContentChanged(String content) {
@@ -124,14 +127,15 @@ class _StoryCreationScreenState extends State<StoryCreationScreen> {
 
     setState(() => _isSyncing = true);
 
-    // Debounced save
-    await Future.delayed(const Duration(milliseconds: 500));
-    if (page.content == content) {
-      await _provider.updatePage(page.copyWith(
-        content: content,
-        updatedAt: DateTime.now(),
-      ));
-      page.content = content;
+    try {
+      // Debounced save
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (page.content != content) {
+        await _provider.updatePage(page.copyWith(
+          content: content,
+          updatedAt: DateTime.now(),
+        ));
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -158,6 +162,20 @@ class _StoryCreationScreenState extends State<StoryCreationScreen> {
     _createdStory = _createdStory!.copyWith(title: title);
   }
 
+  Future<void> _updateDescription() async {
+    if (_createdStory == null) return;
+    final description = _descriptionController.text.trim();
+    await _provider.updateStory(_createdStory!.copyWith(description: description));
+    _createdStory = _createdStory!.copyWith(description: description);
+  }
+
+  Future<void> _updateGenre(String? genre) async {
+    setState(() => _selectedGenre = genre);
+    if (_createdStory == null) return;
+    await _provider.updateStory(_createdStory!.copyWith(genre: genre?.toLowerCase()));
+    _createdStory = _createdStory!.copyWith(genre: genre?.toLowerCase());
+  }
+
   Future<void> _deletePage(String pageId) async {
     if (_pages.length > 1) {
       await _provider.deletePage(pageId);
@@ -165,9 +183,9 @@ class _StoryCreationScreenState extends State<StoryCreationScreen> {
         _pages.removeWhere((p) => p.id == pageId);
         if (_activePageId == pageId) {
           _activePageId = _pages.first.id;
-          _contentController?.text = _activePage?.content ?? '';
+          _contentController.text = _activePage?.content ?? '';
         }
-      }
+      });
     }
   }
 
