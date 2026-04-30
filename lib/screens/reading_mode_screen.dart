@@ -383,59 +383,34 @@ class _ReadingPageView extends StatelessWidget {
     );
   }
 
-  /// Builds first-page content with a decorative drop cap.
+  /// Builds first-page content with a decorative initial letter.
   Widget _buildDropCapContent(String content) {
+    if (content.isEmpty) return const SizedBox.shrink();
+
     final firstChar = content[0];
     final rest = content.substring(1);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Drop cap
-            Padding(
-              padding: const EdgeInsets.only(right: 8, top: 4),
-              child: Text(
-                firstChar,
-                style: const TextStyle(
-                  fontSize: 56,
-                  color: AppColors.accent,
-                  fontWeight: FontWeight.w700,
-                  height: 0.85,
-                ),
-              ),
-            ),
-            // First chunk of text next to the drop cap
-            Expanded(
-              child: Text(
-                rest.length > 120 ? rest.substring(0, 120) : rest,
-                style: const TextStyle(
-                  fontSize: 19,
-                  color: AppColors.foreground,
-                  height: 1.8,
-                  letterSpacing: 0.1,
-                ),
-              ),
-            ),
-          ],
+    return Text.rich(
+      TextSpan(
+        style: const TextStyle(
+          fontSize: 19,
+          color: AppColors.foreground,
+          height: 1.8,
+          letterSpacing: 0.1,
         ),
-        // Remaining text
-        if (rest.length > 120)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              rest.substring(120),
-              style: const TextStyle(
-                fontSize: 19,
-                color: AppColors.foreground,
-                height: 1.8,
-                letterSpacing: 0.1,
-              ),
+        children: [
+          TextSpan(
+            text: firstChar,
+            style: const TextStyle(
+              fontSize: 34,
+              color: AppColors.accent,
+              fontWeight: FontWeight.w700,
             ),
           ),
-      ],
+          TextSpan(text: rest),
+        ],
+      ),
+      textAlign: TextAlign.left,
     );
   }
 }
