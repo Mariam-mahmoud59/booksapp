@@ -182,16 +182,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   color: AppColors.accent,
                   onTap: () async {
                     await context.read<StoryProvider>().triggerSync();
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Sync triggered'),
-                          duration: Duration(seconds: 1),
-                        ),
-                      );
-                      // Refresh stats after sync
-                      context.read<AuthProvider>().loadStats();
-                    }
+                    if (!context.mounted) return;
+                    
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Sync triggered'),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                    // Refresh stats after sync
+                    context.read<AuthProvider>().loadStats();
                   },
                 ),
             ],
