@@ -15,6 +15,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _autoSync = true;
   bool _notifications = true;
 
+  void _showComingSoon() {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('This feature is coming soon!'),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.primary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -58,14 +72,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       icon: Icons.dark_mode_outlined,
                       label: 'Theme',
                       trailing: const _TrailingText('Light'),
-                      onTap: () {},
+                      onTap: _showComingSoon,
                     ),
                     const SizedBox(height: 8),
                     _SettingRow(
                       icon: Icons.text_fields,
                       label: 'Font Size',
                       trailing: const _TrailingText('Medium'),
-                      onTap: () {},
+                      onTap: _showComingSoon,
                     ),
                     const SizedBox(height: 24),
                     const _SectionLabel('SYNC'),
@@ -82,7 +96,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _SettingRow(
                       icon: Icons.person_outline,
                       label: 'Edit Profile',
-                      onTap: () {},
+                      onTap: _showComingSoon,
                     ),
                     const SizedBox(height: 8),
                     _SettingToggle(
@@ -95,7 +109,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _SettingRow(
                       icon: Icons.lock_outline,
                       label: 'Change Password',
-                      onTap: () {},
+                      onTap: _showComingSoon,
                     ),
                     const SizedBox(height: 24),
                     const _SectionLabel('OTHER'),
@@ -103,13 +117,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _SettingRow(
                       icon: Icons.info_outline,
                       label: 'About',
-                      onTap: () {},
+                      onTap: _showComingSoon,
                     ),
                     const SizedBox(height: 8),
                     _SettingRow(
                       icon: Icons.privacy_tip_outlined,
                       label: 'Privacy Policy',
-                      onTap: () {},
+                      onTap: _showComingSoon,
                     ),
                     const SizedBox(height: 24),
                     SizedBox(
