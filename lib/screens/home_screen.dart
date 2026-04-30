@@ -325,7 +325,10 @@ class _StoryCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Row(
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
                     children: [
                       Text(
                         story.lastEditedDisplay,
@@ -334,8 +337,7 @@ class _StoryCard extends StatelessWidget {
                           color: AppColors.mutedForeground,
                         ),
                       ),
-                      if (story.genre != null && story.genre!.isNotEmpty) ...[
-                        const SizedBox(width: 8),
+                      if (story.genre != null && story.genre!.isNotEmpty)
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 2),
@@ -352,7 +354,6 @@ class _StoryCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                      ],
                     ],
                   ),
                 ],

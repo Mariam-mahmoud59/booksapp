@@ -415,7 +415,7 @@ class _StoryGridView extends StatelessWidget {
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 0.7,
+        childAspectRatio: 0.65,
       ),
       itemCount: stories.length,
       itemBuilder: (context, index) {
@@ -630,11 +630,13 @@ class _StoryListView extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 6),
-                          Row(
+                          Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 6,
+                            runSpacing: 4,
                             children: [
                               _StatusBadge(status: story.status),
-                              if (!story.isSynced) ...[
-                                const SizedBox(width: 6),
+                              if (!story.isSynced)
                                 Container(
                                   width: 6,
                                   height: 6,
@@ -643,12 +645,9 @@ class _StoryListView extends StatelessWidget {
                                     shape: BoxShape.circle,
                                   ),
                                 ),
-                              ],
-                              if (story.isFavorite) ...[
-                                const SizedBox(width: 8),
+                              if (story.isFavorite)
                                 const Icon(Icons.favorite,
                                     color: AppColors.accent, size: 14),
-                              ],
                             ],
                           ),
                         ],
