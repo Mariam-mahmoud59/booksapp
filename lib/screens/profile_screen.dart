@@ -138,21 +138,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: Icons.menu_book_outlined,
                     value: '${authProvider.storyCount}',
                     label: 'Stories',
+                    onTap: () => context.go('/app/stories'),
                   ),
                   _StatCard(
                     icon: Icons.favorite_outlined,
                     value: '${authProvider.favoriteCount}',
                     label: 'Favorites',
+                    onTap: () => context.go('/app/favorites'),
                   ),
                   _StatCard(
                     icon: Icons.trending_up,
                     value: _formatWordCount(authProvider.wordCount),
                     label: 'Words Written',
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('You have written ${authProvider.wordCount} words!'),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    },
                   ),
                   _StatCard(
                     icon: Icons.cloud_done_outlined,
                     value: authProvider.isAuthenticated ? 'Active' : 'Off',
                     label: 'Sync Status',
+                    onTap: () {
+                      if (!authProvider.isAuthenticated) {
+                        context.go('/login');
+                      } else {
+                         ScaffoldMessenger.of(context).showSnackBar(
+                           const SnackBar(
+                             content: Text('Account is active and syncing'),
+                             duration: Duration(seconds: 2),
+                           ),
+                         );
+                      }
+                    },
                   ),
                 ],
               ),
@@ -206,22 +228,29 @@ class _StatCard extends StatelessWidget {
   final IconData icon;
   final String value;
   final String label;
+  final VoidCallback? onTap;
 
   const _StatCard({
     required this.icon,
     required this.value,
     required this.label,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.card,
+    return Material(
+      color: AppColors.card,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
+          ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
