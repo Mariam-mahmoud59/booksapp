@@ -20,7 +20,11 @@ class _MyStoriesScreenState extends State<MyStoriesScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => context.read<StoryProvider>().loadStories());
+    Future.microtask(() {
+      if (mounted) {
+        context.read<StoryProvider>().loadStories();
+      }
+    });
   }
 
   @override
@@ -442,11 +446,11 @@ class _StoryGridView extends StatelessWidget {
                 color: AppColors.card,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppColors.border),
-                boxShadow: [
+                boxShadow: const [
                   BoxShadow(
-                    color: const Color.fromRGBO(141, 110, 99, 0.06),
+                    color: Color.fromRGBO(141, 110, 99, 0.06),
                     blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    offset: Offset(0, 2),
                   ),
                 ],
               ),
@@ -469,9 +473,8 @@ class _StoryGridView extends StatelessWidget {
                             right: 8,
                             child: Container(
                               padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color:
-                                    const Color.fromRGBO(255, 255, 255, 0.9),
+                              decoration: const BoxDecoration(
+                                color: Color.fromRGBO(255, 255, 255, 0.9),
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(
@@ -594,11 +597,11 @@ class _StoryListView extends StatelessWidget {
                   color: AppColors.card,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: AppColors.border),
-                  boxShadow: [
+                  boxShadow: const [
                     BoxShadow(
-                      color: const Color.fromRGBO(141, 110, 99, 0.06),
+                      color: Color.fromRGBO(141, 110, 99, 0.06),
                       blurRadius: 8,
-                      offset: const Offset(0, 2),
+                      offset: Offset(0, 2),
                     ),
                   ],
                 ),

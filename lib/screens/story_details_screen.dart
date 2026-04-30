@@ -17,8 +17,8 @@ class StoryDetailsScreen extends StatefulWidget {
 class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
   Story? _story;
   bool _isLoading = true;
-  bool _isDeleting = false;
-  int _wordCount = 0;
+  final bool _isDeleting = false;
+  final int _wordCount = 0;
   String? _error;
 
   @override

@@ -31,7 +31,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     // Ensure stories are loaded when screen is shown
-    Future.microtask(() => context.read<StoryProvider>().loadStories());
+    Future.microtask(() {
+      if (mounted) {
+        context.read<StoryProvider>().loadStories();
+      }
+    });
 
     _currentTipIndex = Random().nextInt(_writingTips.length);
 
@@ -123,11 +127,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     end: Alignment.bottomRight,
                     colors: [AppColors.accent, AppColors.primary],
                   ),
-                  boxShadow: [
+                  boxShadow: const [
                     BoxShadow(
-                      color: const Color.fromRGBO(200, 162, 124, 0.3),
+                      color: Color.fromRGBO(200, 162, 124, 0.3),
                       blurRadius: 16,
-                      offset: const Offset(0, 6),
+                      offset: Offset(0, 6),
                     ),
                   ],
                 ),
@@ -137,8 +141,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     Container(
                       width: 56,
                       height: 56,
-                      decoration: BoxDecoration(
-                        color: const Color.fromRGBO(255, 255, 255, 0.2),
+                      decoration: const BoxDecoration(
+                        color: Color.fromRGBO(255, 255, 255, 0.2),
                         shape: BoxShape.circle,
                       ),
                       child:
@@ -160,8 +164,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             const SizedBox(height: 32),
 
             // ── Continue Writing Section ──
-            Row(
-              children: const [
+            const Row(
+              children: [
                 Icon(Icons.access_time,
                     size: 20, color: AppColors.mutedForeground),
                 SizedBox(width: 8),
@@ -221,8 +225,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             // ── Writing Tips Section ──
             GestureDetector(
               onTap: _cycleTip,
-              child: Row(
-                children: const [
+              child: const Row(
+                children: [
                   Icon(Icons.auto_awesome,
                       size: 20, color: AppColors.mutedForeground),
                   SizedBox(width: 8),
@@ -288,11 +292,11 @@ class _StoryCard extends StatelessWidget {
           color: AppColors.card,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.border),
-          boxShadow: [
+          boxShadow: const [
             BoxShadow(
-              color: const Color.fromRGBO(141, 110, 99, 0.06),
+              color: Color.fromRGBO(141, 110, 99, 0.06),
               blurRadius: 8,
-              offset: const Offset(0, 2),
+              offset: Offset(0, 2),
             ),
           ],
         ),

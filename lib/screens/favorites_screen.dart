@@ -323,11 +323,11 @@ class _FavoriteCard extends StatelessWidget {
           color: AppColors.card,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.border),
-          boxShadow: [
+          boxShadow: const [
             BoxShadow(
-              color: const Color.fromRGBO(141, 110, 99, 0.06),
+              color: Color.fromRGBO(141, 110, 99, 0.06),
               blurRadius: 8,
-              offset: const Offset(0, 2),
+              offset: Offset(0, 2),
             ),
           ],
         ),
@@ -395,8 +395,8 @@ class _FavoriteCard extends StatelessWidget {
               onTap: onUnfavorite,
               child: Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color.fromRGBO(200, 162, 124, 0.1),
+                decoration: const BoxDecoration(
+                  color: Color.fromRGBO(200, 162, 124, 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
