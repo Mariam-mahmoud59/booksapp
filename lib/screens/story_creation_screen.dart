@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/story.dart';
 import '../providers/story_provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class StoryCreationScreen extends StatefulWidget {
   const StoryCreationScreen({super.key});
@@ -16,6 +18,8 @@ class StoryCreationScreen extends StatefulWidget {
 class _StoryCreationScreenState extends State<StoryCreationScreen>
     with SingleTickerProviderStateMixin {
   StoryProvider get _provider => context.read<StoryProvider>();
+  File? _coverImage;
+  final ImagePicker _picker = ImagePicker();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   late TextEditingController _contentController;
@@ -27,6 +31,7 @@ class _StoryCreationScreenState extends State<StoryCreationScreen>
   String? _selectedGenre;
   Timer? _debounceTimer;
   int _wordCount = 0;
+  bool _hasSaved = false;
 
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
@@ -75,11 +80,27 @@ class _StoryCreationScreenState extends State<StoryCreationScreen>
     });
   }
 
+  Future<void> _pickImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() {
+        _coverImage = File(pickedFile.path);
+      });
+      if (_createdStory != null) {
+        _createdStory = _createdStory!.copyWith(coverImageUrl: pickedFile.path);
+        await _provider.updateStory(_createdStory!);
+      }
+    }
+  }
+
+
+
   /// Create the story in SQLite on first content change.
   Future<void> _ensureStoryCreated() async {
-    if (_createdStory != null) return;
+    if (_createdStory != null || _isCreating) return;
 
-    setState(() => _isCreating = true);
+    _isCreating = true;
 
     final title = _titleController.text.trim();
     _createdStory = await _provider.createStory(title: title.isEmpty ? 'Untitled' : title);
@@ -142,9 +163,6 @@ class _StoryCreationScreenState extends State<StoryCreationScreen>
           SnackBar(
             content: const Text('Failed to save changes'),
             backgroundColor: const Color(0xFFD4183D),
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       }
@@ -189,8 +207,7 @@ class _StoryCreationScreenState extends State<StoryCreationScreen>
     }
   }
 
-  Future<void> _handleBack() async {
-    // Flush any pending debounce
+  Future<void> _handleSave() async {
     _debounceTimer?.cancel();
     final page = _activePage;
     if (page != null && _contentController.text != page.content) {
@@ -200,190 +217,196 @@ class _StoryCreationScreenState extends State<StoryCreationScreen>
       await _updateTitle();
       await _updateDescription();
     }
+    _hasSaved = true;
     if (mounted) context.go('/app');
+  }
+
+  Future<void> _handleBack() async {
+    if (_createdStory != null && !_hasSaved) {
+      final shouldLeave = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppColors.card,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('Leave without saving?',
+              style: TextStyle(color: AppColors.foreground)),
+          content: Text(
+              'Are you sure you want to leave without saving? This story will be discarded.',
+              style: TextStyle(color: AppColors.mutedForeground)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('Cancel',
+                  style: TextStyle(color: AppColors.mutedForeground)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFFD4183D)),
+              child: const Text('Leave'),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldLeave == true) {
+        await _provider.deleteStory(_createdStory!.id);
+        if (mounted) context.go('/app');
+      }
+    } else {
+      if (mounted) context.go('/app');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // ─── Top Bar ───
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-              decoration: const BoxDecoration(
-                color: AppColors.card,
-                border:
-                    Border(bottom: BorderSide(color: AppColors.border)),
-              ),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: _handleBack,
-                    icon: const Icon(Icons.chevron_left,
-                        size: 28, color: AppColors.foreground),
-                    padding: EdgeInsets.zero,
+    return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) async {
+          if (didPop) return;
+          await _handleBack();
+        },
+        child: Scaffold(
+          backgroundColor: AppColors.background,
+          body: SafeArea(
+            child: Column(
+              children: [
+                // ─── Top Bar ───
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.card,
+                    border: Border(bottom: BorderSide(color: AppColors.border)),
                   ),
-                  const Spacer(),
-                  _SyncIndicator(isSyncing: _isSyncing),
-                ],
-              ),
-            ),
-
-            // ─── Content ───
-            Expanded(
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
-                      // Title
-                      TextField(
-                        controller: _titleController,
-                        onChanged: (_) {
-                          if (_createdStory == null) _ensureStoryCreated();
-                        },
-                        onEditingComplete: _updateTitle,
-                        style: const TextStyle(
-                          fontSize: 28,
-                          color: AppColors.foreground,
-                          fontWeight: FontWeight.w400,
+                      IconButton(
+                        onPressed: _handleBack,
+                        icon: Icon(Icons.chevron_left,
+                            size: 28, color: AppColors.foreground),
+                        padding: EdgeInsets.zero,
+                      ),
+                      const Spacer(),
+                      _SyncIndicator(isSyncing: _isSyncing),
+                      const SizedBox(width: 8),
+                      TextButton(
+                        onPressed: _handleSave,
+                        style: TextButton.styleFrom(
+                          backgroundColor:
+                              AppColors.accent.withValues(alpha: 0.1),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
                         ),
-                        decoration: const InputDecoration(
-                          hintText: 'Story Title',
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          filled: false,
-                          hintStyle: TextStyle(
-                            fontSize: 28,
-                            color: AppColors.mutedForeground,
+                        child: Text(
+                          'Save',
+                          style: TextStyle(
+                            color: AppColors.accent,
+                            fontWeight: FontWeight.bold,
                           ),
-                          contentPadding: EdgeInsets.zero,
                         ),
                       ),
+                    ],
+                  ),
+                ),
 
-                      const SizedBox(height: 8),
-
-                      // Description
-                      TextField(
-                        controller: _descriptionController,
-                        onEditingComplete: _updateDescription,
-                        maxLines: 2,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppColors.mutedForeground,
-                          height: 1.5,
-                        ),
-                        decoration: const InputDecoration(
-                          hintText: 'Add a brief description...',
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          filled: false,
-                          hintStyle: TextStyle(
-                            fontSize: 14,
-                            color: AppColors.muted,
-                          ),
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Genre Picker
-                      const Text(
-                        'GENRE',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.mutedForeground,
-                          letterSpacing: 1.5,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: _genres.map((genre) {
-                          final isSelected =
-                              _selectedGenre == genre;
-                          final colors = Story(
-                            id: '',
-                            userId: '',
-                            title: '',
-                            genre: genre.toLowerCase(),
-                            createdAt: DateTime.now(),
-                            updatedAt: DateTime.now(),
-                          ).coverColors;
-                          return GestureDetector(
-                            onTap: () => _updateGenre(
-                                isSelected ? null : genre),
-                            child: AnimatedContainer(
-                              duration:
-                                  const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 8),
-                              decoration: BoxDecoration(
-                                gradient: isSelected
-                                    ? LinearGradient(
-                                        colors: colors)
-                                    : null,
-                                color: isSelected
-                                    ? null
-                                    : AppColors.card,
-                                borderRadius:
-                                    BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: isSelected
-                                      ? colors.first
-                                      : AppColors.border,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      gradient: LinearGradient(
-                                          colors: colors),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    genre,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: isSelected
-                                          ? Colors.white
-                                          : AppColors.foreground,
-                                      fontWeight: isSelected
-                                          ? FontWeight.w600
-                                          : FontWeight.w400,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Pages Label
-                      Row(
+                // ─── Content ───
+                Expanded(
+                  child: FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'PAGES',
+                          GestureDetector(
+                            onTap: _pickImage,
+                            child: Container(
+                              height: 180,
+                              width: double.infinity,
+                              margin: const EdgeInsets.only(bottom: 20),
+                              decoration: BoxDecoration(
+                                color: AppColors.card,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: _coverImage == null
+                                  ? Center(
+                                      child: Text(
+                                        "Tap to upload cover",
+                                        style: TextStyle(
+                                            color: AppColors.mutedForeground),
+                                      ),
+                                    )
+                                  : ClipRRect(
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Image.file(
+                                        _coverImage!,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          // Title
+                          TextField(
+                            controller: _titleController,
+                            onChanged: (_) {
+                              if (_createdStory == null) _ensureStoryCreated();
+                            },
+                            onEditingComplete: _updateTitle,
+                            style: TextStyle(
+                              fontSize: 28,
+                              color: AppColors.foreground,
+                              fontWeight: FontWeight.w400,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'Story Title',
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              filled: false,
+                              hintStyle: TextStyle(
+                                fontSize: 28,
+                                color: AppColors.mutedForeground,
+                              ),
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+
+                          const SizedBox(height: 8),
+
+                          // Description
+                          TextField(
+                            controller: _descriptionController,
+                            onEditingComplete: _updateDescription,
+                            maxLines: 2,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.mutedForeground,
+                              height: 1.5,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'Add a brief description...',
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              filled: false,
+                              hintStyle: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.muted,
+                              ),
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          // Genre Picker
+                          Text(
+                            'GENRE',
                             style: TextStyle(
                               fontSize: 11,
                               color: AppColors.mutedForeground,
@@ -391,199 +414,242 @@ class _StoryCreationScreenState extends State<StoryCreationScreen>
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const Spacer(),
-                          if (_wordCount > 0)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppColors.secondary,
-                                borderRadius:
-                                    BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '$_wordCount ${_wordCount == 1 ? 'word' : 'words'}',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: AppColors.mutedForeground,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // Page Tabs
-                      SizedBox(
-                        height: 40,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _pages.length + 1,
-                          itemBuilder: (context, i) {
-                            if (i == _pages.length) {
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: _genres.map((genre) {
+                              final isSelected = _selectedGenre == genre;
+                              final colors = Story(
+                                id: '',
+                                userId: '',
+                                title: '',
+                                genre: genre.toLowerCase(),
+                                createdAt: DateTime.now(),
+                                updatedAt: DateTime.now(),
+                              ).coverColors;
                               return GestureDetector(
-                                onTap: _addPage,
-                                child: Container(
-                                  width: 40,
-                                  height: 40,
-                                  margin:
-                                      const EdgeInsets.only(right: 8),
+                                onTap: () =>
+                                    _updateGenre(isSelected ? null : genre),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 8),
                                   decoration: BoxDecoration(
-                                    color: AppColors.secondary,
-                                    borderRadius:
-                                        BorderRadius.circular(10),
+                                    gradient: isSelected
+                                        ? LinearGradient(colors: colors)
+                                        : null,
+                                    color: isSelected ? null : AppColors.card,
+                                    borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
-                                        color: AppColors.border),
+                                      color: isSelected
+                                          ? colors.first
+                                          : AppColors.border,
+                                    ),
                                   ),
-                                  child: const Icon(
-                                    Icons.add,
-                                    size: 20,
-                                    color: AppColors.foreground,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 8,
+                                        height: 8,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          gradient:
+                                              LinearGradient(colors: colors),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        genre,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: isSelected
+                                              ? Colors.white
+                                              : AppColors.foreground,
+                                          fontWeight: isSelected
+                                              ? FontWeight.w600
+                                              : FontWeight.w400,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               );
-                            }
-                            final page = _pages[i];
-                            final isActive = page.id == _activePageId;
-                            return GestureDetector(
-                              onTap: () {
-                                // Save current page before switching
-                                _debounceTimer?.cancel();
-                                final currentPage = _activePage;
-                                if (currentPage != null) {
-                                  _saveContent(
-                                      _contentController.text);
-                                }
-                                setState(
-                                    () => _activePageId = page.id);
-                                _contentController.text =
-                                    page.content;
-                                _updateWordCount();
-                              },
-                              onLongPress: _pages.length > 1
-                                  ? () => _showDeletePageDialog(
-                                      page.id, i + 1)
-                                  : null,
-                              child: AnimatedContainer(
-                                duration:
-                                    const Duration(milliseconds: 200),
-                                width: 40,
-                                height: 40,
-                                margin:
-                                    const EdgeInsets.only(right: 8),
-                                decoration: BoxDecoration(
-                                  color: isActive
-                                      ? AppColors.accent
-                                      : AppColors.card,
-                                  borderRadius:
-                                      BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: isActive
-                                        ? AppColors.accent
-                                        : AppColors.border,
-                                  ),
-                                  boxShadow: isActive
-                                      ? [
-                                          BoxShadow(
-                                            color: AppColors.accent
-                                                .withValues(
-                                                    alpha: 0.3),
-                                            blurRadius: 8,
-                                            offset:
-                                                const Offset(0, 2),
-                                          ),
-                                        ]
-                                      : null,
+                            }).toList(),
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // Pages Label
+                          Row(
+                            children: [
+                              Text(
+                                'PAGES',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.mutedForeground,
+                                  letterSpacing: 1.5,
+                                  fontWeight: FontWeight.w600,
                                 ),
-                                child: Center(
+                              ),
+                              const Spacer(),
+                              if (_wordCount > 0)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.secondary,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                   child: Text(
-                                    '${i + 1}',
+                                    '$_wordCount ${_wordCount == 1 ? 'word' : 'words'}',
                                     style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: isActive
-                                          ? FontWeight.w600
-                                          : FontWeight.w400,
-                                      color: isActive
-                                          ? Colors.white
-                                          : AppColors.foreground,
+                                      fontSize: 11,
+                                      color: AppColors.mutedForeground,
                                     ),
                                   ),
                                 ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Content Editor
-                      if (_isCreating)
-                        Container(
-                          constraints:
-                              const BoxConstraints(minHeight: 300),
-                          decoration: BoxDecoration(
-                            color: AppColors.card,
-                            borderRadius: BorderRadius.circular(16),
-                            border:
-                                Border.all(color: AppColors.border),
+                            ],
                           ),
-                          child: const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(48),
-                              child: CircularProgressIndicator(
-                                valueColor: AlwaysStoppedAnimation(
-                                    AppColors.accent),
-                                strokeWidth: 2,
-                              ),
+
+                          const SizedBox(height: 12),
+
+                          // Page Tabs
+                          SizedBox(
+                            height: 40,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: _pages.length + 1,
+                              itemBuilder: (context, i) {
+                                if (i == _pages.length) {
+                                  return GestureDetector(
+                                    onTap: _addPage,
+                                    child: Container(
+                                      width: 40,
+                                      height: 40,
+                                      margin: const EdgeInsets.only(right: 8),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.secondary,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border:
+                                            Border.all(color: AppColors.border),
+                                      ),
+                                      child: Icon(
+                                        Icons.add,
+                                        size: 20,
+                                        color: AppColors.foreground,
+                                      ),
+                                    ),
+                                  );
+                                }
+                                final page = _pages[i];
+                                final isActive = page.id == _activePageId;
+                                return GestureDetector(
+                                  onTap: () {
+                                    // Save current page before switching
+                                    _debounceTimer?.cancel();
+                                    final currentPage = _activePage;
+                                    if (currentPage != null) {
+                                      _saveContent(_contentController.text);
+                                    }
+                                    setState(() => _activePageId = page.id);
+                                    _contentController.text = page.content;
+                                    _updateWordCount();
+                                  },
+                                  onLongPress: _pages.length > 1
+                                      ? () =>
+                                          _showDeletePageDialog(page.id, i + 1)
+                                      : null,
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 200),
+                                    width: 40,
+                                    height: 40,
+                                    margin: const EdgeInsets.only(right: 8),
+                                    decoration: BoxDecoration(
+                                      color: isActive
+                                          ? AppColors.accent
+                                          : AppColors.card,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: isActive
+                                            ? AppColors.accent
+                                            : AppColors.border,
+                                      ),
+                                      boxShadow: isActive
+                                          ? [
+                                              BoxShadow(
+                                                color: AppColors.accent
+                                                    .withValues(alpha: 0.3),
+                                                blurRadius: 8,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ]
+                                          : null,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        '${i + 1}',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: isActive
+                                              ? FontWeight.w600
+                                              : FontWeight.w400,
+                                          color: isActive
+                                              ? Colors.white
+                                              : AppColors.foreground,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           ),
-                        )
-                      else
-                        Container(
-                          constraints:
-                              const BoxConstraints(minHeight: 300),
-                          decoration: BoxDecoration(
-                            color: AppColors.card,
-                            borderRadius: BorderRadius.circular(16),
-                            border:
-                                Border.all(color: AppColors.border),
-                          ),
-                          padding: const EdgeInsets.all(16),
-                          child: TextField(
-                            controller: _contentController,
-                            onChanged: _onContentChanged,
-                            maxLines: null,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: AppColors.foreground,
-                              height: 1.7,
+
+                          const SizedBox(height: 24),
+
+                          // Content Editor
+                          Container(
+                            constraints: const BoxConstraints(minHeight: 300),
+                            decoration: BoxDecoration(
+                              color: AppColors.card,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppColors.border),
                             ),
-                            decoration: const InputDecoration(
-                              hintText:
-                                  'Start writing your story...',
-                              border: InputBorder.none,
-                              enabledBorder: InputBorder.none,
-                              focusedBorder: InputBorder.none,
-                              filled: false,
-                              contentPadding: EdgeInsets.zero,
-                              hintStyle: TextStyle(
-                                color: AppColors.mutedForeground,
+                            padding: const EdgeInsets.all(16),
+                            child: TextField(
+                              controller: _contentController,
+                              onChanged: _onContentChanged,
+                              maxLines: null,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: AppColors.foreground,
                                 height: 1.7,
                               ),
+                              decoration: InputDecoration(
+                                hintText: 'Start writing your story...',
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                filled: false,
+                                contentPadding: EdgeInsets.zero,
+                                hintStyle: TextStyle(
+                                  color: AppColors.mutedForeground,
+                                  height: 1.7,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                    ],
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
-    );
+          ),
+        ));
   }
 
   void _showDeletePageDialog(String pageId, int pageNumber) {
@@ -593,13 +659,13 @@ class _StoryCreationScreenState extends State<StoryCreationScreen>
         backgroundColor: AppColors.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Delete Page $pageNumber?',
-            style: const TextStyle(color: AppColors.foreground)),
-        content: const Text('This action cannot be undone.',
+            style: TextStyle(color: AppColors.foreground)),
+        content: Text('This action cannot be undone.',
             style: TextStyle(color: AppColors.mutedForeground)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel',
+            child: Text('Cancel',
                 style: TextStyle(color: AppColors.mutedForeground)),
           ),
           TextButton(
@@ -635,19 +701,19 @@ class _SyncIndicator extends StatelessWidget {
                   height: 14,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor:
-                        AlwaysStoppedAnimation(AppColors.accent.withValues(alpha: 0.7)),
+                    valueColor: AlwaysStoppedAnimation(
+                        AppColors.accent.withValues(alpha: 0.7)),
                   ),
                 ),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Saving...',
-                  style: TextStyle(
-                      fontSize: 13, color: AppColors.mutedForeground),
+                  style:
+                      TextStyle(fontSize: 13, color: AppColors.mutedForeground),
                 ),
               ],
             )
-          : const Row(
+          : Row(
               key: ValueKey('saved'),
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -656,8 +722,8 @@ class _SyncIndicator extends StatelessWidget {
                 SizedBox(width: 6),
                 Text(
                   'Saved',
-                  style: TextStyle(
-                      fontSize: 13, color: AppColors.mutedForeground),
+                  style:
+                      TextStyle(fontSize: 13, color: AppColors.mutedForeground),
                 ),
               ],
             ),

@@ -57,6 +57,8 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
     super.dispose();
   }
 
+
+
   Future<void> _loadStory() async {
     try {
       final story = await _provider.getStory(widget.storyId);
@@ -71,11 +73,13 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
           _selectedGenre = story?.genre != null
               ? '${story!.genre![0].toUpperCase()}${story.genre!.substring(1)}'
               : null;
+
           if (pages.isNotEmpty) {
             _activePageId = pages.first.id;
             _contentController.text = pages.first.content;
             _updateWordCount();
           }
+
           _isLoading = false;
         });
       }
@@ -86,9 +90,6 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
           SnackBar(
             content: Text('Failed to load story: $e'),
             backgroundColor: const Color(0xFFD4183D),
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       }
@@ -120,9 +121,6 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
           SnackBar(
             content: Text('Failed to add page: $e'),
             backgroundColor: const Color(0xFFD4183D),
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       }
@@ -156,12 +154,8 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Failed to save changes'),
-            backgroundColor: const Color(0xFFD4183D),
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          const SnackBar(
+            content: Text('Failed to save changes'),
           ),
         );
       }
@@ -193,6 +187,8 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
         .updateStory(_story!.copyWith(genre: genre?.toLowerCase()));
     _story = _story!.copyWith(genre: genre?.toLowerCase());
   }
+
+
 
   Future<void> _deletePage(String pageId) async {
     if (_pages.length > 1) {
@@ -229,7 +225,7 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: AppColors.background,
         body: Center(
           child: CircularProgressIndicator(
@@ -246,18 +242,16 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
           children: [
             // ─── Top Bar ───
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-              decoration: const BoxDecoration(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+              decoration: BoxDecoration(
                 color: AppColors.card,
-                border:
-                    Border(bottom: BorderSide(color: AppColors.border)),
+                border: Border(bottom: BorderSide(color: AppColors.border)),
               ),
               child: Row(
                 children: [
                   IconButton(
                     onPressed: _navigateBack,
-                    icon: const Icon(Icons.chevron_left,
+                    icon: Icon(Icons.chevron_left,
                         size: 28, color: AppColors.foreground),
                   ),
                   const Spacer(),
@@ -268,11 +262,10 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
                       final router = GoRouter.of(context);
                       await _handleBack();
                       if (mounted) {
-                        router
-                            .go('/app/story/${widget.storyId}/read');
+                        router.go('/app/story/${widget.storyId}/read');
                       }
                     },
-                    icon: const Icon(Icons.visibility_outlined,
+                    icon: Icon(Icons.visibility_outlined,
                         size: 22, color: AppColors.foreground),
                     tooltip: 'Preview',
                   ),
@@ -291,12 +284,12 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
                     TextField(
                       controller: _titleController,
                       onEditingComplete: _updateTitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 28,
                         color: AppColors.foreground,
                         fontWeight: FontWeight.w400,
                       ),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: 'Story Title',
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
@@ -312,11 +305,10 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
 
                     // Meta toggle
                     GestureDetector(
-                      onTap: () => setState(
-                          () => _showMetaSection = !_showMetaSection),
+                      onTap: () =>
+                          setState(() => _showMetaSection = !_showMetaSection),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 8),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Row(
                           children: [
                             Icon(
@@ -331,7 +323,7 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
                               _showMetaSection
                                   ? 'Hide details'
                                   : 'Description & Genre',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 color: AppColors.mutedForeground,
                               ),
@@ -355,12 +347,12 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
                             controller: _descriptionController,
                             onEditingComplete: _updateDescription,
                             maxLines: 2,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
                               color: AppColors.mutedForeground,
                               height: 1.5,
                             ),
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               hintText: 'Add a brief description...',
                               border: InputBorder.none,
                               enabledBorder: InputBorder.none,
@@ -381,8 +373,7 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
                             spacing: 8,
                             runSpacing: 8,
                             children: _genres.map((genre) {
-                              final isSelected =
-                                  _selectedGenre == genre;
+                              final isSelected = _selectedGenre == genre;
                               final colors = Story(
                                 id: '',
                                 userId: '',
@@ -392,25 +383,18 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
                                 updatedAt: DateTime.now(),
                               ).coverColors;
                               return GestureDetector(
-                                onTap: () => _updateGenre(
-                                    isSelected ? null : genre),
+                                onTap: () =>
+                                    _updateGenre(isSelected ? null : genre),
                                 child: AnimatedContainer(
-                                  duration: const Duration(
-                                      milliseconds: 200),
-                                  padding:
-                                      const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 6),
+                                  duration: const Duration(milliseconds: 200),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 6),
                                   decoration: BoxDecoration(
                                     gradient: isSelected
-                                        ? LinearGradient(
-                                            colors: colors)
+                                        ? LinearGradient(colors: colors)
                                         : null,
-                                    color: isSelected
-                                        ? null
-                                        : AppColors.card,
-                                    borderRadius:
-                                        BorderRadius.circular(20),
+                                    color: isSelected ? null : AppColors.card,
+                                    borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
                                       color: isSelected
                                           ? colors.first
@@ -426,8 +410,7 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
                                           gradient:
-                                              LinearGradient(
-                                                  colors: colors),
+                                              LinearGradient(colors: colors),
                                         ),
                                       ),
                                       const SizedBox(width: 6),
@@ -437,8 +420,7 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
                                           fontSize: 12,
                                           color: isSelected
                                               ? Colors.white
-                                              : AppColors
-                                                  .foreground,
+                                              : AppColors.foreground,
                                           fontWeight: isSelected
                                               ? FontWeight.w600
                                               : FontWeight.w400,
@@ -461,7 +443,7 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
                     // Pages header with word count
                     Row(
                       children: [
-                        const Text(
+                        Text(
                           'PAGES',
                           style: TextStyle(
                             fontSize: 11,
@@ -477,12 +459,11 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
                                 horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
                               color: AppColors.secondary,
-                              borderRadius:
-                                  BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
                               '$_wordCount ${_wordCount == 1 ? 'word' : 'words'}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 11,
                                 color: AppColors.mutedForeground,
                               ),
@@ -506,18 +487,14 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
                               child: Container(
                                 width: 40,
                                 height: 40,
-                                margin:
-                                    const EdgeInsets.only(right: 8),
+                                margin: const EdgeInsets.only(right: 8),
                                 decoration: BoxDecoration(
                                   color: AppColors.secondary,
-                                  borderRadius:
-                                      BorderRadius.circular(10),
-                                  border: Border.all(
-                                      color: AppColors.border),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: AppColors.border),
                                 ),
-                                child: const Icon(Icons.add,
-                                    size: 20,
-                                    color: AppColors.foreground),
+                                child: Icon(Icons.add,
+                                    size: 20, color: AppColors.foreground),
                               ),
                             );
                           }
@@ -529,32 +506,25 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
                               _debounceTimer?.cancel();
                               final currentPage = _activePage;
                               if (currentPage != null) {
-                                _saveContent(
-                                    _contentController.text);
+                                _saveContent(_contentController.text);
                               }
-                              setState(
-                                  () => _activePageId = page.id);
-                              _contentController.text =
-                                  page.content;
+                              setState(() => _activePageId = page.id);
+                              _contentController.text = page.content;
                               _updateWordCount();
                             },
                             onLongPress: _pages.length > 1
-                                ? () => _showDeletePageDialog(
-                                    page.id, i + 1)
+                                ? () => _showDeletePageDialog(page.id, i + 1)
                                 : null,
                             child: AnimatedContainer(
-                              duration:
-                                  const Duration(milliseconds: 200),
+                              duration: const Duration(milliseconds: 200),
                               width: 40,
                               height: 40,
-                              margin:
-                                  const EdgeInsets.only(right: 8),
+                              margin: const EdgeInsets.only(right: 8),
                               decoration: BoxDecoration(
                                 color: isActive
                                     ? AppColors.accent
                                     : AppColors.card,
-                                borderRadius:
-                                    BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
                                   color: isActive
                                       ? AppColors.accent
@@ -564,11 +534,9 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
                                     ? [
                                         BoxShadow(
                                           color: AppColors.accent
-                                              .withValues(
-                                                  alpha: 0.3),
+                                              .withValues(alpha: 0.3),
                                           blurRadius: 8,
-                                          offset:
-                                              const Offset(0, 2),
+                                          offset: const Offset(0, 2),
                                         ),
                                       ]
                                     : null,
@@ -597,8 +565,7 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
 
                     // Content editor
                     Container(
-                      constraints:
-                          const BoxConstraints(minHeight: 300),
+                      constraints: const BoxConstraints(minHeight: 300),
                       decoration: BoxDecoration(
                         color: AppColors.card,
                         borderRadius: BorderRadius.circular(16),
@@ -609,20 +576,20 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
                         controller: _contentController,
                         onChanged: _onContentChanged,
                         maxLines: null,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           color: AppColors.foreground,
                           height: 1.7,
                         ),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: 'Continue your story...',
                           border: InputBorder.none,
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
                           filled: false,
                           contentPadding: EdgeInsets.zero,
-                          hintStyle: TextStyle(
-                              color: AppColors.mutedForeground),
+                          hintStyle:
+                              TextStyle(color: AppColors.mutedForeground),
                         ),
                       ),
                     ),
@@ -641,16 +608,15 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.card,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Delete Page $pageNumber?',
-            style: const TextStyle(color: AppColors.foreground)),
-        content: const Text('This action cannot be undone.',
+            style: TextStyle(color: AppColors.foreground)),
+        content: Text('This action cannot be undone.',
             style: TextStyle(color: AppColors.mutedForeground)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel',
+            child: Text('Cancel',
                 style: TextStyle(color: AppColors.mutedForeground)),
           ),
           TextButton(
@@ -658,8 +624,8 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
               Navigator.pop(ctx);
               _deletePage(pageId);
             },
-            style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFFD4183D)),
+            style:
+                TextButton.styleFrom(foregroundColor: const Color(0xFFD4183D)),
             child: const Text('Delete'),
           ),
         ],
@@ -691,14 +657,14 @@ class _SyncIndicator extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Saving...',
-                  style: TextStyle(
-                      fontSize: 13, color: AppColors.mutedForeground),
+                  style:
+                      TextStyle(fontSize: 13, color: AppColors.mutedForeground),
                 ),
               ],
             )
-          : const Row(
+          : Row(
               key: ValueKey('saved'),
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -707,8 +673,8 @@ class _SyncIndicator extends StatelessWidget {
                 SizedBox(width: 6),
                 Text(
                   'Saved',
-                  style: TextStyle(
-                      fontSize: 13, color: AppColors.mutedForeground),
+                  style:
+                      TextStyle(fontSize: 13, color: AppColors.mutedForeground),
                 ),
               ],
             ),

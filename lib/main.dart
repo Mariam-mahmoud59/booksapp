@@ -11,6 +11,8 @@ import 'repositories/story_repository.dart';
 import 'providers/story_provider.dart';
 import 'providers/auth_provider.dart';
 
+import 'providers/theme_provider.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -42,6 +44,7 @@ void main() async {
 
   runApp(const StoryBookCreatorApp());
 }
+
 class StoryBookCreatorApp extends StatelessWidget {
   const StoryBookCreatorApp({super.key});
 
@@ -49,22 +52,19 @@ class StoryBookCreatorApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) {
-          final provider = AuthProvider();
-          Future.microtask(() => provider.checkAuthState());
-          return provider;
-        }),
-        ChangeNotifierProvider(create: (_) {
-          final provider = StoryProvider();
-          Future.microtask(() => provider.loadStories());
-          return provider;
-        }),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => AuthProvider()..checkAuthState()),
+        ChangeNotifierProvider(create: (_) => StoryProvider()..loadStories()),
       ],
-      child: MaterialApp.router(
-        title: 'Story Book Creator',
-        theme: AppTheme.lightTheme,
-        routerConfig: router,
-        debugShowCheckedModeBanner: false,
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp.router(
+            title: 'Story Book Creator',
+            theme: AppTheme.lightTheme,
+            routerConfig: router,
+            debugShowCheckedModeBanner: false,
+          );
+        },
       ),
     );
   }

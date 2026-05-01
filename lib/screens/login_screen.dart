@@ -15,6 +15,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -41,6 +42,12 @@ class _LoginScreenState extends State<LoginScreen> {
     final success = await authProvider.signIn(email, password);
 
     if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Signed in successfully'),
+          backgroundColor: AppColors.primary,
+        ),
+      );
       // Reload stories for the newly authenticated user
       context.read<StoryProvider>().loadStories();
       context.go('/app');
@@ -82,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Welcome Back',
                       style: TextStyle(
                         fontSize: 32,
@@ -91,7 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       'Continue your creative journey',
                       style: TextStyle(
                         fontSize: 16,
@@ -123,7 +130,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 16),
                     ],
-                    const Text(
+                    Text(
                       'Email',
                       style: TextStyle(
                         fontSize: 14,
@@ -134,7 +141,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         prefixIcon: Icon(
                           Icons.mail_outline,
                           color: AppColors.mutedForeground,
@@ -143,7 +150,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    const Text(
+                    Text(
                       'Password',
                       style: TextStyle(
                         fontSize: 14,
@@ -153,11 +160,24 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _passwordController,
-                      obscureText: true,
-                      decoration: const InputDecoration(
+                      obscureText: _obscurePassword,
+                      decoration: InputDecoration(
                         prefixIcon: Icon(
                           Icons.lock_outline,
                           color: AppColors.mutedForeground,
+                        ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: AppColors.mutedForeground,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
                         ),
                         hintText: 'Enter your password',
                       ),
@@ -196,16 +216,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       width: double.infinity,
                       height: 56,
                       child: ElevatedButton(
-                        onPressed:
-                            authProvider.isLoading ? null : _handleLogin,
+                        onPressed: authProvider.isLoading ? null : _handleLogin,
                         child: authProvider.isLoading
                             ? const SizedBox(
                                 height: 20,
                                 width: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation(
-                                      Colors.white),
+                                  valueColor:
+                                      AlwaysStoppedAnimation(Colors.white),
                                 ),
                               )
                             : const Text('Login'),
@@ -224,7 +243,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text(
+                        Text(
                           "Don't have an account? ",
                           style: TextStyle(color: AppColors.mutedForeground),
                         ),

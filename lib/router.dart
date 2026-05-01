@@ -13,6 +13,7 @@ import 'screens/reading_mode_screen.dart';
 import 'screens/favorites_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/change_password_screen.dart';
 import 'widgets/main_scaffold.dart';
 
 final router = GoRouter(
@@ -60,6 +61,10 @@ final router = GoRouter(
     GoRoute(
       path: '/app/settings',
       builder: (context, state) => const SettingsScreen(),
+    ),
+    GoRoute(
+      path: '/app/settings/password',
+      builder: (context, state) => const ChangePasswordScreen(),
     ),
     ShellRoute(
       builder: (context, state, child) => MainScaffold(child: child),

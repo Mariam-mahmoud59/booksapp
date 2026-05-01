@@ -89,7 +89,7 @@ class _SplashScreenState extends State<SplashScreen>
               children: [
                 FadeTransition(
                   opacity: _fadeIconAnim,
-                  child: const Icon(
+                  child: Icon(
                     Icons.menu_book_rounded,
                     size: 80,
                     color: AppColors.primary,
@@ -98,7 +98,7 @@ class _SplashScreenState extends State<SplashScreen>
                 const SizedBox(height: 24),
                 FadeTransition(
                   opacity: _fadeTitleAnim,
-                  child: const Text(
+                  child: Text(
                     'Story Book',
                     style: TextStyle(
                       fontSize: 36,

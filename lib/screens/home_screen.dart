@@ -2,10 +2,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:story_book_creator/models/story.dart';
 import '../theme/app_theme.dart';
 import '../widgets/story_cover.dart';
 import '../providers/story_provider.dart';
+import '../models/story.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -98,14 +98,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             // ── Greeting ──
             Text(
               _getGreeting(),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 28,
                 color: AppColors.foreground,
                 fontWeight: FontWeight.w400,
               ),
             ),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               'Ready to write your story?',
               style: TextStyle(
                 fontSize: 16,
@@ -122,7 +122,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 height: 160,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(24),
-                  gradient: const LinearGradient(
+                  gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [AppColors.accent, AppColors.primary],
@@ -162,13 +162,59 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             ),
             const SizedBox(height: 32),
+            // ── Suggested Stories Section ──
+            Row(
+              children: [
+                Icon(Icons.explore_outlined,
+                    size: 20, color: AppColors.mutedForeground),
+                const SizedBox(width: 8),
+                Text(
+                  'Suggested For You',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: AppColors.foreground,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 140,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                children: [
+                  _SuggestedStoryCard(
+                    title: 'The Silent Echo',
+                    author: 'By Elena Vance',
+                    colors: [AppColors.cover1Start, AppColors.cover1End],
+                    rating: '4.8',
+                  ),
+                  const SizedBox(width: 16),
+                  _SuggestedStoryCard(
+                    title: 'Midnight in Paris',
+                    author: 'By Julian Frost',
+                    colors: [AppColors.cover2Start, AppColors.cover2End],
+                    rating: '4.6',
+                  ),
+                  const SizedBox(width: 16),
+                  _SuggestedStoryCard(
+                    title: 'Whispers of the Wind',
+                    author: 'By Sarah Lin',
+                    colors: [AppColors.cover3Start, AppColors.cover3End],
+                    rating: '4.9',
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
 
             // ── Continue Writing Section ──
-            const Row(
+            Row(
               children: [
                 Icon(Icons.access_time,
                     size: 20, color: AppColors.mutedForeground),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Text(
                   'Continue Writing',
                   style: TextStyle(
@@ -225,11 +271,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             // ── Writing Tips Section ──
             GestureDetector(
               onTap: _cycleTip,
-              child: const Row(
+              child: Row(
                 children: [
                   Icon(Icons.auto_awesome,
                       size: 20, color: AppColors.mutedForeground),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Text(
                     'Writing Tips',
                     style: TextStyle(
@@ -255,7 +301,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
                 child: Text(
                   _writingTips[_currentTipIndex],
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     color: AppColors.foreground,
                     height: 1.6,
@@ -303,7 +349,8 @@ class _StoryCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            StoryCover(colors: story.coverColors),
+            StoryCover(
+                colors: story.coverColors, imageUrl: story.coverImageUrl),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -311,7 +358,7 @@ class _StoryCard extends StatelessWidget {
                 children: [
                   Text(
                     story.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       color: AppColors.foreground,
                     ),
@@ -319,7 +366,7 @@ class _StoryCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     '${story.pageCount} pages',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       color: AppColors.mutedForeground,
                     ),
@@ -332,7 +379,7 @@ class _StoryCard extends StatelessWidget {
                     children: [
                       Text(
                         story.lastEditedDisplay,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           color: AppColors.mutedForeground,
                         ),
@@ -347,7 +394,7 @@ class _StoryCard extends StatelessWidget {
                           ),
                           child: Text(
                             story.genre!,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 10,
                               color: AppColors.accent,
                               fontWeight: FontWeight.w500,
@@ -362,7 +409,7 @@ class _StoryCard extends StatelessWidget {
             Column(
               children: [
                 if (story.isFavorite)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.only(bottom: 4),
                     child: Icon(
                       Icons.favorite,
@@ -375,14 +422,14 @@ class _StoryCard extends StatelessWidget {
                     width: 8,
                     height: 8,
                     margin: const EdgeInsets.only(right: 8),
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       color: AppColors.accent,
                       shape: BoxShape.circle,
                     ),
                   ),
               ],
             ),
-            const Icon(
+            Icon(
               Icons.chevron_right,
               color: AppColors.mutedForeground,
             ),
@@ -531,7 +578,7 @@ class _EmptyState extends StatelessWidget {
             color: AppColors.mutedForeground.withValues(alpha: 102),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'No stories yet',
             style: TextStyle(
               fontSize: 18,
@@ -540,13 +587,107 @@ class _EmptyState extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Tap "Create New Story" above to begin your first masterpiece!',
             style: TextStyle(
               fontSize: 14,
               color: AppColors.mutedForeground,
             ),
             textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SuggestedStoryCard extends StatelessWidget {
+  final String title;
+  final String author;
+  final List<Color> colors;
+  final String rating;
+
+  const _SuggestedStoryCard({
+    required this.title,
+    required this.author,
+    required this.colors,
+    required this.rating,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 240,
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 100,
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(15),
+                bottomLeft: Radius.circular(15),
+              ),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: colors,
+              ),
+            ),
+            child: Center(
+              child: Icon(Icons.auto_stories_rounded,
+                  color: Colors.white.withValues(alpha: 0.5), size: 32),
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.foreground,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    author,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.mutedForeground,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const Spacer(),
+                  Row(
+                    children: [
+                      const Icon(Icons.star,
+                          size: 14, color: Color(0xFFFFC107)),
+                      const SizedBox(width: 4),
+                      Text(
+                        rating,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.mutedForeground,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),

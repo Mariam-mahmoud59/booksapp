@@ -16,6 +16,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -39,8 +40,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     if (password.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Password must be at least 6 characters')),
+        const SnackBar(content: Text('Password must be at least 6 characters')),
       );
       return;
     }
@@ -85,7 +85,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Create Account',
                       style: TextStyle(
                         fontSize: 32,
@@ -94,7 +94,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       'Start your storytelling journey today',
                       style: TextStyle(
                         fontSize: 16,
@@ -126,7 +126,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                       const SizedBox(height: 16),
                     ],
-                    const Text(
+                    Text(
                       'Name',
                       style:
                           TextStyle(fontSize: 14, color: AppColors.foreground),
@@ -134,7 +134,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _nameController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         prefixIcon: Icon(
                           Icons.person_outline,
                           color: AppColors.mutedForeground,
@@ -143,7 +143,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    const Text(
+                    Text(
                       'Email',
                       style:
                           TextStyle(fontSize: 14, color: AppColors.foreground),
@@ -152,7 +152,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         prefixIcon: Icon(
                           Icons.mail_outline,
                           color: AppColors.mutedForeground,
@@ -161,7 +161,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    const Text(
+                    Text(
                       'Password',
                       style:
                           TextStyle(fontSize: 14, color: AppColors.foreground),
@@ -169,11 +169,24 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _passwordController,
-                      obscureText: true,
-                      decoration: const InputDecoration(
+                      obscureText: _obscurePassword,
+                      decoration: InputDecoration(
                         prefixIcon: Icon(
                           Icons.lock_outline,
                           color: AppColors.mutedForeground,
+                        ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: AppColors.mutedForeground,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
                         ),
                         hintText: 'Create a password',
                       ),
@@ -202,7 +215,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text(
+                        Text(
                           'Already have an account? ',
                           style: TextStyle(color: AppColors.mutedForeground),
                         ),

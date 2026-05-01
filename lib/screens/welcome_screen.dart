@@ -21,7 +21,7 @@ class WelcomeScreen extends StatelessWidget {
             padding: const EdgeInsets.all(32),
             child: Column(
               children: [
-                const Expanded(
+                Expanded(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -92,7 +92,7 @@ class WelcomeScreen extends StatelessWidget {
                       height: 56,
                       child: TextButton(
                         onPressed: () => context.go('/app'),
-                        child: const Text(
+                        child: Text(
                           'Continue as Guest',
                           style: TextStyle(color: AppColors.mutedForeground),
                         ),

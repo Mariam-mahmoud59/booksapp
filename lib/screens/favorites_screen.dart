@@ -107,7 +107,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     final error = storyProvider.error;
 
     // Sync local list with provider data when not animating
-    if (!isLoading && _localFavorites.isEmpty && storyProvider.favoriteStories.isNotEmpty) {
+    if (!isLoading &&
+        _localFavorites.isEmpty &&
+        storyProvider.favoriteStories.isNotEmpty) {
       _localFavorites = List.from(storyProvider.favoriteStories);
     }
 
@@ -126,10 +128,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 // ── Header ──
                 Row(
                   children: [
-                    const Icon(Icons.favorite,
-                        size: 32, color: AppColors.accent),
+                    Icon(Icons.favorite, size: 32, color: AppColors.accent),
                     const SizedBox(width: 12),
-                    const Text(
+                    Text(
                       'Favorites',
                       style: TextStyle(
                         fontSize: 28,
@@ -148,7 +149,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                         ),
                         child: Text(
                           '${_localFavorites.length}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
                             color: AppColors.accent,
                             fontWeight: FontWeight.w600,
@@ -171,7 +172,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                           const SizedBox(height: 16),
                           Text(
                             error,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
                               color: AppColors.mutedForeground,
                             ),
@@ -196,11 +197,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
                 // ── Loading State ──
                 else if (isLoading)
-                  const Expanded(
+                  Expanded(
                     child: Center(
                       child: CircularProgressIndicator(
-                        valueColor:
-                            AlwaysStoppedAnimation(AppColors.accent),
+                        valueColor: AlwaysStoppedAnimation(AppColors.accent),
                       ),
                     ),
                   )
@@ -232,7 +232,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                 ),
                               ),
                               const SizedBox(height: 20),
-                              const Text(
+                              Text(
                                 'No favorites yet',
                                 style: TextStyle(
                                   fontSize: 20,
@@ -241,7 +241,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              const Padding(
+                              Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 40),
                                 child: Text(
                                   'Tap the heart icon on any story to save it here for quick access',
@@ -281,8 +281,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                 onUnfavorite: () =>
                                     _unfavoriteWithUndo(index, story),
                                 onTap: () async {
-                                  await context
-                                      .push('/app/story/${story.id}');
+                                  await context.push('/app/story/${story.id}');
                                   if (mounted) _loadFavorites();
                                 },
                               ),
@@ -334,7 +333,8 @@ class _FavoriteCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            StoryCover(colors: story.coverColors),
+            StoryCover(
+                colors: story.coverColors, imageUrl: story.coverImageUrl),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -342,7 +342,7 @@ class _FavoriteCard extends StatelessWidget {
                 children: [
                   Text(
                     story.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       color: AppColors.foreground,
                     ),
@@ -350,7 +350,7 @@ class _FavoriteCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     '${story.pageCount} pages',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       color: AppColors.mutedForeground,
                     ),
@@ -363,7 +363,7 @@ class _FavoriteCard extends StatelessWidget {
                     children: [
                       Text(
                         story.lastEditedDisplay,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           color: AppColors.mutedForeground,
                         ),
@@ -373,13 +373,12 @@ class _FavoriteCard extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: const Color.fromRGBO(
-                                200, 162, 124, 0.15),
+                            color: const Color.fromRGBO(200, 162, 124, 0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             story.genre!,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 10,
                               color: AppColors.accent,
                               fontWeight: FontWeight.w500,
@@ -399,7 +398,7 @@ class _FavoriteCard extends StatelessWidget {
                   color: Color.fromRGBO(200, 162, 124, 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.favorite,
                   color: AppColors.accent,
                   size: 20,

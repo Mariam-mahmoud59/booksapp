@@ -80,7 +80,7 @@ class _ReadingModeScreenState extends State<ReadingModeScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: AppColors.background,
         body: Center(
           child: CircularProgressIndicator(
@@ -97,16 +97,13 @@ class _ReadingModeScreenState extends State<ReadingModeScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline,
+              Icon(Icons.error_outline,
                   size: 48, color: AppColors.mutedForeground),
               const SizedBox(height: 16),
-              Text(_error!,
-                  style:
-                      const TextStyle(color: AppColors.mutedForeground)),
+              Text(_error!, style: TextStyle(color: AppColors.mutedForeground)),
               const SizedBox(height: 16),
               TextButton.icon(
-                onPressed: () =>
-                    context.go('/app/story/${widget.storyId}'),
+                onPressed: () => context.go('/app/story/${widget.storyId}'),
                 icon: const Icon(Icons.arrow_back),
                 label: const Text('Go Back'),
               ),
@@ -123,16 +120,14 @@ class _ReadingModeScreenState extends State<ReadingModeScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.article_outlined,
+              Icon(Icons.article_outlined,
                   size: 48, color: AppColors.mutedForeground),
               const SizedBox(height: 16),
-              const Text('No pages to display',
-                  style:
-                      TextStyle(color: AppColors.mutedForeground)),
+              Text('No pages to display',
+                  style: TextStyle(color: AppColors.mutedForeground)),
               const SizedBox(height: 16),
               TextButton.icon(
-                onPressed: () =>
-                    context.go('/app/story/${widget.storyId}'),
+                onPressed: () => context.go('/app/story/${widget.storyId}'),
                 icon: const Icon(Icons.arrow_back),
                 label: const Text('Go Back'),
               ),
@@ -144,7 +139,7 @@ class _ReadingModeScreenState extends State<ReadingModeScreen> {
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -164,22 +159,20 @@ class _ReadingModeScreenState extends State<ReadingModeScreen> {
                     value: value,
                     minHeight: 3,
                     backgroundColor: AppColors.border,
-                    valueColor:
-                        const AlwaysStoppedAnimation(AppColors.accent),
+                    valueColor: AlwaysStoppedAnimation(AppColors.accent),
                   );
                 },
               ),
 
               // ─── Header ───
               Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 child: Row(
                   children: [
                     IconButton(
                       onPressed: () =>
                           context.go('/app/story/${widget.storyId}'),
-                      icon: const Icon(Icons.chevron_left,
+                      icon: Icon(Icons.chevron_left,
                           size: 28, color: AppColors.foreground),
                     ),
                     const SizedBox(width: 4),
@@ -190,7 +183,7 @@ class _ReadingModeScreenState extends State<ReadingModeScreen> {
                           if (_story != null)
                             Text(
                               _story!.title,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 15,
                                 color: AppColors.foreground,
                                 fontWeight: FontWeight.w500,
@@ -200,7 +193,7 @@ class _ReadingModeScreenState extends State<ReadingModeScreen> {
                             ),
                           Text(
                             'Page ${_currentPage + 1} of ${_pages.length}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               color: AppColors.mutedForeground,
                             ),
@@ -212,7 +205,7 @@ class _ReadingModeScreenState extends State<ReadingModeScreen> {
                     IconButton(
                       onPressed: () =>
                           context.go('/app/story/${widget.storyId}/edit'),
-                      icon: const Icon(Icons.edit_outlined,
+                      icon: Icon(Icons.edit_outlined,
                           size: 20, color: AppColors.mutedForeground),
                       tooltip: 'Edit Story',
                     ),
@@ -224,8 +217,7 @@ class _ReadingModeScreenState extends State<ReadingModeScreen> {
               Expanded(
                 child: PageView.builder(
                   controller: _pageController,
-                  onPageChanged: (i) =>
-                      setState(() => _currentPage = i),
+                  onPageChanged: (i) => setState(() => _currentPage = i),
                   itemCount: _pages.length,
                   itemBuilder: (context, index) {
                     final page = _pages[index];
@@ -278,7 +270,7 @@ class _ReadingModeScreenState extends State<ReadingModeScreen> {
                       ),
                       child: Text(
                         '${_currentPage + 1} / ${_pages.length}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           color: AppColors.foreground,
                           fontWeight: FontWeight.w500,
@@ -340,7 +332,7 @@ class _ReadingPageView extends StatelessWidget {
           if (page.title != null && page.title!.isNotEmpty) ...[
             Text(
               page.title!,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 24,
                 color: AppColors.foreground,
                 fontWeight: FontWeight.w500,
@@ -352,7 +344,7 @@ class _ReadingPageView extends StatelessWidget {
 
           // Content with drop cap for first page
           if (isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(top: 48),
               child: Center(
                 child: Text(
@@ -370,7 +362,7 @@ class _ReadingPageView extends StatelessWidget {
           else
             Text(
               content,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 19,
                 color: AppColors.foreground,
                 height: 1.8,
@@ -392,7 +384,7 @@ class _ReadingPageView extends StatelessWidget {
 
     return Text.rich(
       TextSpan(
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 19,
           color: AppColors.foreground,
           height: 1.8,
@@ -401,7 +393,7 @@ class _ReadingPageView extends StatelessWidget {
         children: [
           TextSpan(
             text: firstChar,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 34,
               color: AppColors.accent,
               fontWeight: FontWeight.w700,

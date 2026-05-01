@@ -47,18 +47,18 @@ class _MyStoriesScreenState extends State<MyStoriesScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
+        title: Text(
           'Delete Story',
           style: TextStyle(color: AppColors.foreground),
         ),
         content: Text(
-          'Are you sure you want to delete "${story.title}"? This action cannot be undone.',
-          style: const TextStyle(color: AppColors.mutedForeground),
+          'Are you sure you want to delete this story?',
+          style: TextStyle(color: AppColors.mutedForeground),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text(
+            child: Text(
               'Cancel',
               style: TextStyle(color: AppColors.mutedForeground),
             ),
@@ -114,7 +114,7 @@ class _MyStoriesScreenState extends State<MyStoriesScreen> {
                     Expanded(
                       child: Row(
                         children: [
-                          const Text(
+                          Text(
                             'My Stories',
                             style: TextStyle(
                               fontSize: 28,
@@ -134,7 +134,7 @@ class _MyStoriesScreenState extends State<MyStoriesScreen> {
                               ),
                               child: Text(
                                 '$totalCount',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 14,
                                   color: AppColors.accent,
                                   fontWeight: FontWeight.w600,
@@ -163,7 +163,7 @@ class _MyStoriesScreenState extends State<MyStoriesScreen> {
                 TextFormField(
                   controller: _searchController,
                   onChanged: _onSearchChanged,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     prefixIcon: Icon(
                       Icons.search,
                       color: AppColors.mutedForeground,
@@ -181,22 +181,19 @@ class _MyStoriesScreenState extends State<MyStoriesScreen> {
                       _FilterChip(
                         label: 'All',
                         isSelected: statusFilter == 'all',
-                        onTap: () =>
-                            storyProvider.setStatusFilter('all'),
+                        onTap: () => storyProvider.setStatusFilter('all'),
                       ),
                       const SizedBox(width: 8),
                       _FilterChip(
                         label: 'Draft',
                         isSelected: statusFilter == 'draft',
-                        onTap: () =>
-                            storyProvider.setStatusFilter('draft'),
+                        onTap: () => storyProvider.setStatusFilter('draft'),
                       ),
                       const SizedBox(width: 8),
                       _FilterChip(
                         label: 'Published',
                         isSelected: statusFilter == 'published',
-                        onTap: () =>
-                            storyProvider.setStatusFilter('published'),
+                        onTap: () => storyProvider.setStatusFilter('published'),
                       ),
                       const SizedBox(width: 16),
                       // Sort dropdown
@@ -211,9 +208,9 @@ class _MyStoriesScreenState extends State<MyStoriesScreen> {
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
                             value: sortOrder,
-                            icon: const Icon(Icons.sort,
+                            icon: Icon(Icons.sort,
                                 size: 18, color: AppColors.mutedForeground),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
                               color: AppColors.foreground,
                               fontFamily: 'Georgia',
@@ -252,7 +249,7 @@ class _MyStoriesScreenState extends State<MyStoriesScreen> {
                           },
                         )
                       : isLoading
-                          ? const Center(
+                          ? Center(
                               child: CircularProgressIndicator(
                                 valueColor:
                                     AlwaysStoppedAnimation(AppColors.accent),
@@ -276,7 +273,7 @@ class _MyStoriesScreenState extends State<MyStoriesScreen> {
                                             : statusFilter != 'all'
                                                 ? 'No $statusFilter stories'
                                                 : 'No stories found',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 18,
                                           color: AppColors.mutedForeground,
                                         ),
@@ -286,7 +283,7 @@ class _MyStoriesScreenState extends State<MyStoriesScreen> {
                                         storyProvider.searchQuery.isNotEmpty
                                             ? 'Try a different keyword'
                                             : 'Tap + to create your first story',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 14,
                                           color: AppColors.mutedForeground,
                                         ),
@@ -462,6 +459,7 @@ class _StoryGridView extends StatelessWidget {
                       children: [
                         StoryCover(
                           colors: story.coverColors,
+                          imageUrl: story.coverImageUrl,
                           width: double.infinity,
                           height: double.infinity,
                           borderRadius: 14,
@@ -477,7 +475,7 @@ class _StoryGridView extends StatelessWidget {
                                 color: Color.fromRGBO(255, 255, 255, 0.9),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.favorite,
                                 color: AppColors.accent,
                                 size: 14,
@@ -494,7 +492,7 @@ class _StoryGridView extends StatelessWidget {
                       children: [
                         Text(
                           story.title,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
                             color: AppColors.foreground,
                             fontWeight: FontWeight.w500,
@@ -507,7 +505,7 @@ class _StoryGridView extends StatelessWidget {
                           children: [
                             Text(
                               '${story.pageCount} pages',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
                                 color: AppColors.mutedForeground,
                               ),
@@ -517,7 +515,7 @@ class _StoryGridView extends StatelessWidget {
                               Container(
                                 width: 6,
                                 height: 6,
-                                decoration: const BoxDecoration(
+                                decoration: BoxDecoration(
                                   color: AppColors.accent,
                                   shape: BoxShape.circle,
                                 ),
@@ -608,7 +606,9 @@ class _StoryListView extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    StoryCover(colors: story.coverColors),
+                    StoryCover(
+                        colors: story.coverColors,
+                        imageUrl: story.coverImageUrl),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
@@ -616,7 +616,7 @@ class _StoryListView extends StatelessWidget {
                         children: [
                           Text(
                             story.title,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
                               color: AppColors.foreground,
                             ),
@@ -624,7 +624,7 @@ class _StoryListView extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(
                             '${story.pageCount} pages · ${story.lastEditedDisplay}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
                               color: AppColors.mutedForeground,
                             ),
@@ -640,13 +640,13 @@ class _StoryListView extends StatelessWidget {
                                 Container(
                                   width: 6,
                                   height: 6,
-                                  decoration: const BoxDecoration(
+                                  decoration: BoxDecoration(
                                     color: AppColors.accent,
                                     shape: BoxShape.circle,
                                   ),
                                 ),
                               if (story.isFavorite)
-                                const Icon(Icons.favorite,
+                                Icon(Icons.favorite,
                                     color: AppColors.accent, size: 14),
                             ],
                           ),
@@ -654,8 +654,9 @@ class _StoryListView extends StatelessWidget {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () =>
-                          context.read<StoryProvider>().toggleFavorite(story.id),
+                      onTap: () => context
+                          .read<StoryProvider>()
+                          .toggleFavorite(story.id),
                       child: Padding(
                         padding: const EdgeInsets.all(8),
                         child: Icon(
@@ -669,7 +670,7 @@ class _StoryListView extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const Icon(
+                    Icon(
                       Icons.chevron_right,
                       color: AppColors.mutedForeground,
                     ),
@@ -728,12 +729,11 @@ class _ErrorWidget extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.error_outline,
-              size: 48, color: Color(0xFFD4183D)),
+          const Icon(Icons.error_outline, size: 48, color: Color(0xFFD4183D)),
           const SizedBox(height: 16),
           Text(
             message,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               color: AppColors.mutedForeground,
             ),

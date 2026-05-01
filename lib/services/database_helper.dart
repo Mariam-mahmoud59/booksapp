@@ -111,16 +111,13 @@ class DatabaseHelper {
     ''');
 
     // Indexes for common queries
-    await db.execute(
-        'CREATE INDEX idx_stories_user ON stories(user_id)');
-    await db.execute(
-        'CREATE INDEX idx_story_pages_story ON story_pages(story_id)');
-    await db.execute(
-        'CREATE INDEX idx_favorites_user ON favorites(user_id)');
-    await db.execute(
-        'CREATE INDEX idx_favorites_story ON favorites(story_id)');
-    await db.execute(
-        'CREATE INDEX idx_sync_queue_status ON sync_queue(status)');
+    await db.execute('CREATE INDEX idx_stories_user ON stories(user_id)');
+    await db
+        .execute('CREATE INDEX idx_story_pages_story ON story_pages(story_id)');
+    await db.execute('CREATE INDEX idx_favorites_user ON favorites(user_id)');
+    await db.execute('CREATE INDEX idx_favorites_story ON favorites(story_id)');
+    await db
+        .execute('CREATE INDEX idx_sync_queue_status ON sync_queue(status)');
   }
 
   // ─────────────────────── PROFILES ───────────────────────
@@ -413,8 +410,7 @@ class DatabaseHelper {
     final db = await database;
     final updates = <String, dynamic>{'status': status};
     if (retryCount != null) updates['retry_count'] = retryCount;
-    return db.update('sync_queue', updates,
-        where: 'id = ?', whereArgs: [id]);
+    return db.update('sync_queue', updates, where: 'id = ?', whereArgs: [id]);
   }
 
   /// Remove completed sync operations.

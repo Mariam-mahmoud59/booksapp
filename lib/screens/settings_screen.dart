@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/auth_provider.dart';
+import '../providers/theme_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -38,18 +39,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             Container(
               padding: const EdgeInsets.all(24),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border(bottom: BorderSide(color: AppColors.border)),
               ),
               child: Row(
                 children: [
                   GestureDetector(
                     onTap: () => context.go('/app/profile'),
-                    child: const Icon(Icons.chevron_left,
+                    child: Icon(Icons.chevron_left,
                         size: 28, color: AppColors.foreground),
                   ),
                   const SizedBox(width: 16),
-                  const Text(
+                  Text(
                     'Settings',
                     style: TextStyle(
                       fontSize: 22,
@@ -68,11 +69,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     const _SectionLabel('APPEARANCE'),
                     const SizedBox(height: 12),
-                    _SettingRow(
-                      icon: Icons.dark_mode_outlined,
-                      label: 'Theme',
-                      trailing: const _TrailingText('Light'),
-                      onTap: _showComingSoon,
+                    Consumer<ThemeProvider>(
+                      builder: (context, themeProvider, child) {
+                        return _SettingToggle(
+                          icon: Icons.dark_mode_outlined,
+                          label: 'Dark Mode',
+                          value: themeProvider.isDarkMode,
+                          onChanged: (v) => themeProvider.toggleTheme(),
+                        );
+                      },
                     ),
                     const SizedBox(height: 8),
                     _SettingRow(
@@ -109,7 +114,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _SettingRow(
                       icon: Icons.lock_outline,
                       label: 'Change Password',
-                      onTap: _showComingSoon,
+                      onTap: () => context.push('/app/settings/password'),
                     ),
                     const SizedBox(height: 24),
                     const _SectionLabel('OTHER'),
@@ -130,10 +135,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       width: double.infinity,
                       height: 56,
                       child: OutlinedButton.icon(
-                        onPressed: () async {
-                          await context.read<AuthProvider>().signOut();
-                          if (!context.mounted) return;
-                          context.go('/welcome');
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              backgroundColor: AppColors.card,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16)),
+                              title: Text('Log Out',
+                                  style:
+                                      TextStyle(color: AppColors.foreground)),
+                              content: Text('Are you sure you want to log out?',
+                                  style: TextStyle(
+                                      color: AppColors.mutedForeground)),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: Text('Cancel',
+                                      style: TextStyle(
+                                          color: AppColors.mutedForeground)),
+                                ),
+                                TextButton(
+                                  onPressed: () async {
+                                    Navigator.pop(ctx);
+                                    await context
+                                        .read<AuthProvider>()
+                                        .signOut();
+                                    if (!context.mounted) return;
+                                    context.go('/welcome');
+                                  },
+                                  style: TextButton.styleFrom(
+                                      foregroundColor: const Color(0xFFD4183D)),
+                                  child: const Text('Log Out'),
+                                ),
+                              ],
+                            ),
+                          );
                         },
                         icon: const Icon(Icons.logout, size: 20),
                         label: const Text('Log Out'),
@@ -164,7 +201,7 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 12,
         color: AppColors.mutedForeground,
         letterSpacing: 1,
@@ -204,14 +241,14 @@ class _SettingRow extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   color: AppColors.foreground,
                 ),
               ),
             ),
             trailing ??
-                const Icon(Icons.chevron_right,
+                Icon(Icons.chevron_right,
                     size: 20, color: AppColors.mutedForeground),
           ],
         ),
@@ -249,7 +286,7 @@ class _SettingToggle extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 color: AppColors.foreground,
               ),
@@ -277,14 +314,13 @@ class _TrailingText extends StatelessWidget {
       children: [
         Text(
           text,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             color: AppColors.mutedForeground,
           ),
         ),
         const SizedBox(width: 4),
-        const Icon(Icons.chevron_right,
-            size: 20, color: AppColors.mutedForeground),
+        Icon(Icons.chevron_right, size: 20, color: AppColors.mutedForeground),
       ],
     );
   }

@@ -109,11 +109,9 @@ class SyncService {
         // Success: mark done and update local record
         await _db.updateSyncQueueStatus(id, 'done');
         await _db.markSynced(tableName, recordId);
-        debugPrint(
-            '[SyncService] Pushed $operation on $tableName/$recordId ✓');
+        debugPrint('[SyncService] Pushed $operation on $tableName/$recordId ✓');
       } catch (e) {
-        debugPrint(
-            '[SyncService] Push failed for $tableName/$recordId: $e');
+        debugPrint('[SyncService] Push failed for $tableName/$recordId: $e');
         if (retryCount + 1 >= _maxRetries) {
           await _db.updateSyncQueueStatus(id, 'failed',
               retryCount: retryCount + 1);
@@ -166,8 +164,7 @@ class SyncService {
 
     if (remoteRows.isEmpty) return;
 
-    debugPrint(
-        '[SyncService] Pulling ${remoteRows.length} rows for $table');
+    debugPrint('[SyncService] Pulling ${remoteRows.length} rows for $table');
 
     final db = await _db.database;
 
@@ -204,7 +201,8 @@ class SyncService {
           }
           await db.update(table, updateData,
               where: 'id = ?', whereArgs: [recordId]);
-          debugPrint('[SyncService] Updated local from remote $table/$recordId');
+          debugPrint(
+              '[SyncService] Updated local from remote $table/$recordId');
         } else {
           // Local has unsynced changes — DO NOT overwrite (local wins)
           debugPrint(

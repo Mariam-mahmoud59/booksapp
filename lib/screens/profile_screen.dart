@@ -1,6 +1,10 @@
+import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:image_picker/image_picker.dart';
 import '../theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../providers/story_provider.dart';
@@ -13,16 +17,198 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  bool _isOnline = true;
+  late StreamSubscription<List<ConnectivityResult>> _connectivitySubscription;
+  final ImagePicker _picker = ImagePicker();
+
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
+    final authProvider = context.read<AuthProvider>();
+    authProvider.loadProfile();
+    authProvider.loadStats();
+
+    _connectivitySubscription =
+        Connectivity().onConnectivityChanged.listen((results) {
       if (mounted) {
-        final authProvider = context.read<AuthProvider>();
-        authProvider.loadProfile();
-        authProvider.loadStats();
+        setState(() {
+          _isOnline = !results.contains(ConnectivityResult.none);
+        });
       }
     });
+
+    Connectivity().checkConnectivity().then((results) {
+      if (mounted) {
+        setState(() {
+          _isOnline = !results.contains(ConnectivityResult.none);
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription.cancel();
+    super.dispose();
+  }
+
+  Future<void> _editProfile(
+      AuthProvider authProvider, String currentName) async {
+    final TextEditingController nameController =
+        TextEditingController(text: currentName);
+    final TextEditingController bioController = TextEditingController(
+      text: authProvider.profile?.bio ?? '',
+    );
+    String? newImagePath;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setStateSheet) => Padding(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 32,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle bar
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Edit Profile',
+                style: TextStyle(
+                  fontSize: 22,
+                  color: AppColors.foreground,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Avatar picker
+              Center(
+                child: GestureDetector(
+                  onTap: () async {
+                    final XFile? image =
+                        await _picker.pickImage(source: ImageSource.gallery);
+                    if (image != null) {
+                      setStateSheet(() => newImagePath = image.path);
+                    }
+                  },
+                  child: Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      Container(
+                        width: 90,
+                        height: 90,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.border,
+                          image: newImagePath != null
+                              ? DecorationImage(
+                                  image: FileImage(File(newImagePath!)),
+                                  fit: BoxFit.cover,
+                                )
+                              : (authProvider.profile?.avatarUrl != null &&
+                                      authProvider
+                                          .profile!.avatarUrl!.isNotEmpty)
+                                  ? DecorationImage(
+                                      image: authProvider
+                                              .profile!.avatarUrl!
+                                              .startsWith('http')
+                                          ? NetworkImage(authProvider
+                                              .profile!.avatarUrl!) as ImageProvider
+                                          : FileImage(File(
+                                              authProvider.profile!.avatarUrl!)),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
+                        ),
+                        child: (newImagePath == null &&
+                                (authProvider.profile?.avatarUrl == null ||
+                                    authProvider.profile!.avatarUrl!.isEmpty))
+                            ? Icon(Icons.camera_alt,
+                                color: AppColors.mutedForeground, size: 28)
+                            : null,
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppColors.accent,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.edit,
+                            size: 14, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Name field
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  labelText: 'Name',
+                  labelStyle: TextStyle(color: AppColors.mutedForeground),
+                  prefixIcon:
+                      Icon(Icons.person_outline, color: AppColors.accent),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Bio field
+              TextField(
+                controller: bioController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  labelText: 'Bio',
+                  hintText: 'Tell us a bit about yourself...',
+                  labelStyle: TextStyle(color: AppColors.mutedForeground),
+                  prefixIcon:
+                      Icon(Icons.edit_note_outlined, color: AppColors.accent),
+                  alignLabelWithHint: true,
+                ),
+              ),
+              const SizedBox(height: 28),
+              // Save button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    await authProvider.updateProfile(
+                      username: nameController.text.trim().isNotEmpty
+                          ? nameController.text.trim()
+                          : currentName,
+                      avatarUrl:
+                          newImagePath ?? authProvider.profile?.avatarUrl,
+                      bio: bioController.text.trim(),
+                    );
+                  },
+                  child: const Text('Save Changes'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   String _formatWordCount(int count) {
@@ -38,7 +224,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final profile = authProvider.profile;
 
     if (profile == null && authProvider.isLoading) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: AppColors.background,
         body: Center(
           child: CircularProgressIndicator(
@@ -62,7 +248,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Profile',
                     style: TextStyle(
                       fontSize: 28,
@@ -72,7 +258,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   IconButton(
                     onPressed: () => context.go('/app/settings'),
-                    icon: const Icon(Icons.settings_outlined,
+                    icon: Icon(Icons.settings_outlined,
                         size: 24, color: AppColors.foreground),
                   ),
                 ],
@@ -81,32 +267,69 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Center(
                 child: Column(
                   children: [
-                    Container(
-                      width: 96,
-                      height: 96,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [AppColors.accent, AppColors.primary],
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          initial,
-                          style: const TextStyle(
-                            fontSize: 36,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
+                    GestureDetector(
+                      onTap: () => _editProfile(authProvider, username),
+                      child: Stack(
+                        alignment: Alignment.bottomRight,
+                        children: [
+                          Container(
+                            width: 96,
+                            height: 96,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: profile?.avatarUrl == null ||
+                                      profile!.avatarUrl!.isEmpty
+                                  ? LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        AppColors.accent,
+                                        AppColors.primary
+                                      ],
+                                    )
+                                  : null,
+                              image: profile?.avatarUrl != null &&
+                                      profile!.avatarUrl!.isNotEmpty
+                                  ? DecorationImage(
+                                      image: profile.avatarUrl!
+                                              .startsWith('http')
+                                          ? NetworkImage(profile.avatarUrl!)
+                                              as ImageProvider
+                                          : FileImage(File(profile.avatarUrl!)),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
+                            ),
+                            child: profile?.avatarUrl == null ||
+                                    profile!.avatarUrl!.isEmpty
+                                ? Center(
+                                    child: Text(
+                                      initial,
+                                      style: const TextStyle(
+                                        fontSize: 36,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  )
+                                : null,
                           ),
-                        ),
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: AppColors.card,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.edit,
+                                size: 16, color: AppColors.accent),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 16),
                     Text(
                       username,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 22,
                         color: AppColors.foreground,
                         fontWeight: FontWeight.w500,
@@ -114,10 +337,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      authProvider.isAuthenticated
-                          ? 'Synced ✓'
+                      _isOnline
+                          ? (authProvider.isAuthenticated
+                              ? 'Online & Synced'
+                              : 'Online Mode')
                           : 'Offline Mode',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         color: AppColors.mutedForeground,
                       ),
@@ -161,7 +386,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   _StatCard(
                     icon: Icons.cloud_done_outlined,
-                    value: authProvider.isAuthenticated ? 'Active' : 'Off',
+                    value: (_isOnline && authProvider.isAuthenticated)
+                        ? 'ON'
+                        : 'Off',
                     label: 'Sync Status',
                     onTap: () {
                       if (!authProvider.isAuthenticated) {
@@ -179,7 +406,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
               const SizedBox(height: 32),
-              const Text(
+              Text(
                 'ACCOUNT',
                 style: TextStyle(
                   fontSize: 12,
@@ -196,13 +423,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   color: AppColors.accent,
                   onTap: () => context.go('/login'),
                 )
-              else
+              else ...[
+                _ActionItem(
+                  icon: Icons.person_outline,
+                  title: 'Edit Profile',
+                  subtitle: 'Update your name, photo & bio',
+                  color: AppColors.accent,
+                  onTap: () => _editProfile(authProvider, username),
+                ),
+                const SizedBox(height: 12),
                 _ActionItem(
                   icon: Icons.sync,
                   title: 'Sync Now',
                   subtitle: 'Push & pull latest changes',
                   color: AppColors.accent,
                   onTap: () async {
+                    if (!_isOnline) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Cannot sync while offline')),
+                      );
+                      return;
+                    }
                     await context.read<StoryProvider>().triggerSync();
                     if (!context.mounted) return;
                     
@@ -216,6 +458,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     context.read<AuthProvider>().loadStats();
                   },
                 ),
+                const SizedBox(height: 12),
+                _ActionItem(
+                  icon: Icons.logout,
+                  title: 'Logout',
+                  subtitle: 'Sign out of your account',
+                  color: const Color(0xFFD4183D),
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        backgroundColor: AppColors.card,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                        title: Text('Logout',
+                            style: TextStyle(color: AppColors.foreground)),
+                        content: Text('Are you sure you want to log out?',
+                            style:
+                                TextStyle(color: AppColors.mutedForeground)),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: Text('Cancel',
+                                style: TextStyle(
+                                    color: AppColors.mutedForeground)),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              Navigator.pop(ctx);
+                              await context.read<AuthProvider>().signOut();
+                              if (mounted) context.go('/welcome');
+                            },
+                            style: TextButton.styleFrom(
+                                foregroundColor: const Color(0xFFD4183D)),
+                            child: const Text('Logout'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
             ],
           ),
         ),
@@ -260,7 +543,7 @@ class _StatCard extends StatelessWidget {
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 22,
               color: AppColors.foreground,
               fontWeight: FontWeight.w500,
@@ -271,7 +554,7 @@ class _StatCard extends StatelessWidget {
             label,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               color: AppColors.mutedForeground,
             ),
@@ -325,7 +608,7 @@ class _ActionItem extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     color: AppColors.foreground,
                     fontWeight: FontWeight.w500,
@@ -333,7 +616,7 @@ class _ActionItem extends StatelessWidget {
                 ),
                 Text(
                   subtitle,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     color: AppColors.mutedForeground,
                   ),

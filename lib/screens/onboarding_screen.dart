@@ -18,12 +18,14 @@ const _slides = [
   OnboardingSlide(
     icon: Icons.menu_book_outlined,
     title: 'Create Your Own Stories',
-    description: 'Write and craft unique stories at your own pace, page by page',
+    description:
+        'Write and craft unique stories at your own pace, page by page',
   ),
   OnboardingSlide(
     icon: Icons.image_outlined,
     title: 'Add Text & Images',
-    description: 'Bring your stories to life with beautiful images and rich text',
+    description:
+        'Bring your stories to life with beautiful images and rich text',
   ),
   OnboardingSlide(
     icon: Icons.sync_rounded,
@@ -82,7 +84,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () => context.go('/welcome'),
-                  child: const Text(
+                  child: Text(
                     'Skip',
                     style: TextStyle(
                       color: AppColors.mutedForeground,
@@ -120,7 +122,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                           const SizedBox(height: 48),
                           Text(
                             slide.title,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 28,
                               color: AppColors.foreground,
                               fontWeight: FontWeight.w400,
@@ -130,7 +132,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                           const SizedBox(height: 16),
                           Text(
                             slide.description,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
                               color: AppColors.mutedForeground,
                               height: 1.6,

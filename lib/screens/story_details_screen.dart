@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -28,8 +29,7 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
   }
 
   Future<void> _loadStory() async {
-    final story =
-        await context.read<StoryProvider>().getStory(widget.storyId);
+    final story = await context.read<StoryProvider>().getStory(widget.storyId);
     if (mounted) {
       setState(() {
         _story = story;
@@ -55,7 +55,7 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: AppColors.background,
         body: Center(
           child: CircularProgressIndicator(
@@ -72,11 +72,11 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline,
+              Icon(Icons.error_outline,
                   size: 48, color: AppColors.mutedForeground),
               const SizedBox(height: 16),
               Text(_error ?? 'Story not found',
-                  style: const TextStyle(color: AppColors.mutedForeground)),
+                  style: TextStyle(color: AppColors.mutedForeground)),
               const SizedBox(height: 16),
               TextButton.icon(
                 onPressed: () => context.go('/app'),
@@ -104,19 +104,35 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
                   height: 280,
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: story.coverColors,
-                    ),
+                    gradient: story.coverImageUrl == null ||
+                            story.coverImageUrl!.isEmpty
+                        ? LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: story.coverColors,
+                          )
+                        : null,
+                    image: story.coverImageUrl != null &&
+                            story.coverImageUrl!.isNotEmpty
+                        ? DecorationImage(
+                            image: story.coverImageUrl!.startsWith('http')
+                                ? NetworkImage(story.coverImageUrl!)
+                                    as ImageProvider
+                                : FileImage(File(story.coverImageUrl!)),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
                   ),
-                  child: Center(
-                    child: Icon(
-                      Icons.auto_stories_rounded,
-                      size: 64,
-                      color: Colors.white.withValues(alpha: 0.25),
-                    ),
-                  ),
+                  child: story.coverImageUrl == null ||
+                          story.coverImageUrl!.isEmpty
+                      ? Center(
+                          child: Icon(
+                            Icons.auto_stories_rounded,
+                            size: 64,
+                            color: Colors.white.withValues(alpha: 0.25),
+                          ),
+                        )
+                      : null,
                 ),
                 // Back button
                 Positioned(
@@ -155,8 +171,7 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 300),
                         transitionBuilder: (child, animation) =>
-                            ScaleTransition(
-                                scale: animation, child: child),
+                            ScaleTransition(scale: animation, child: child),
                         child: Icon(
                           story.isFavorite
                               ? Icons.favorite
@@ -210,7 +225,7 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
                       Expanded(
                         child: Text(
                           story.title,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 28,
                             color: AppColors.foreground,
                             fontWeight: FontWeight.w400,
@@ -222,11 +237,10 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color:
-                                AppColors.accent.withValues(alpha: 0.15),
+                            color: AppColors.accent.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(Icons.cloud_off,
@@ -234,8 +248,7 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
                               SizedBox(width: 4),
                               Text('Offline',
                                   style: TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.accent)),
+                                      fontSize: 11, color: AppColors.accent)),
                             ],
                           ),
                         ),
@@ -248,7 +261,7 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
                     const SizedBox(height: 8),
                     Text(
                       story.description!,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         color: AppColors.mutedForeground,
                         height: 1.5,
@@ -323,12 +336,10 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
                     height: 56,
                     child: ElevatedButton.icon(
                       onPressed: () async {
-                        await context
-                            .push('/app/story/${story.id}/read');
+                        await context.push('/app/story/${story.id}/read');
                         _loadStory();
                       },
-                      icon:
-                          const Icon(Icons.menu_book_rounded, size: 20),
+                      icon: const Icon(Icons.menu_book_rounded, size: 20),
                       label: const Text('Read Story'),
                     ),
                   ),
@@ -338,8 +349,7 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
                     height: 56,
                     child: OutlinedButton.icon(
                       onPressed: () async {
-                        await context
-                            .push('/app/story/${story.id}/edit');
+                        await context.push('/app/story/${story.id}/edit');
                         _loadStory();
                       },
                       icon: const Icon(Icons.edit_outlined, size: 20),
@@ -350,7 +360,7 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
                   const SizedBox(height: 28),
 
                   // More options
-                  const Text(
+                  Text(
                     'MORE OPTIONS',
                     style: TextStyle(
                       fontSize: 11,
@@ -377,13 +387,11 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
                     onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content:
-                              const Text('Share coming soon!'),
+                          content: const Text('Share coming soon!'),
                           behavior: SnackBarBehavior.floating,
                           backgroundColor: AppColors.primary,
                           shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(12)),
+                              borderRadius: BorderRadius.circular(12)),
                         ),
                       );
                     },
@@ -410,18 +418,17 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.card,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Story',
-            style: TextStyle(color: AppColors.foreground)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title:
+            Text('Delete Story', style: TextStyle(color: AppColors.foreground)),
         content: Text(
-          'Are you sure you want to delete "${_story?.title}"? This cannot be undone.',
-          style: const TextStyle(color: AppColors.mutedForeground, height: 1.5),
+          'Are you sure you want to delete this story?',
+          style: TextStyle(color: AppColors.mutedForeground, height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel',
+            child: Text('Cancel',
                 style: TextStyle(color: AppColors.mutedForeground)),
           ),
           TextButton(
@@ -456,7 +463,7 @@ class _StatItem extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               color: AppColors.foreground,
               fontWeight: FontWeight.w500,
@@ -467,7 +474,7 @@ class _StatItem extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               color: AppColors.mutedForeground,
             ),
@@ -492,7 +499,7 @@ class _InfoRow extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           text,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             color: AppColors.mutedForeground,
           ),

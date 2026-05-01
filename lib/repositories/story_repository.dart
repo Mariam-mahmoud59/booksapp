@@ -30,13 +30,14 @@ class StoryRepository {
     return _db.getProfile(_userId);
   }
 
-  Future<void> updateProfile({String? username, String? avatarUrl}) async {
+  Future<void> updateProfile({String? username, String? avatarUrl, String? bio}) async {
     final existing = await _db.getProfile(_userId);
     if (existing == null) return;
 
     final updated = existing.copyWith(
       username: username ?? existing.username,
       avatarUrl: avatarUrl ?? existing.avatarUrl,
+      bio: bio ?? existing.bio,
       updatedAt: DateTime.now(),
       isSynced: false,
     );
@@ -145,7 +146,10 @@ class StoryRepository {
         tableName: 'story_pages',
         recordId: page.id,
         operation: 'DELETE',
-        payload: {'id': page.id, 'deleted_at': DateTime.now().toIso8601String()},
+        payload: {
+          'id': page.id,
+          'deleted_at': DateTime.now().toIso8601String()
+        },
       );
     }
 

@@ -146,8 +146,8 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// Update the current user's profile.
-  Future<void> updateProfile({String? username, String? avatarUrl}) async {
-    await _repo.updateProfile(username: username, avatarUrl: avatarUrl);
+  Future<void> updateProfile({String? username, String? avatarUrl, String? bio}) async {
+    await _repo.updateProfile(username: username, avatarUrl: avatarUrl, bio: bio);
     await loadProfile();
   }
 

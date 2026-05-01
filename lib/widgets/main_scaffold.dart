@@ -24,7 +24,7 @@ class MainScaffold extends StatelessWidget {
       backgroundColor: AppColors.background,
       body: child,
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: AppColors.card,
           border: Border(top: BorderSide(color: AppColors.border)),
         ),

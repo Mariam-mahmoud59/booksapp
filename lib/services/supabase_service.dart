@@ -47,9 +47,11 @@ class SupabaseService {
   Future<void> signOut() async {
     await client.auth.signOut();
   }
-Future<void> resetPassword(String email) async {
-  await client.auth.resetPasswordForEmail(email);
-}
+
+  Future<void> resetPassword(String email) async {
+    await client.auth.resetPasswordForEmail(email);
+  }
+
   /// Listen to auth state changes.
   Stream<AuthState> get onAuthStateChange => client.auth.onAuthStateChange;
 
@@ -61,12 +63,8 @@ Future<void> resetPassword(String email) async {
   }
 
   /// Soft-delete: update a row to set deleted_at.
-  Future<void> softDeleteRow(
-      String table, String id, String deletedAt) async {
-    await client
-        .from(table)
-        .update({'deleted_at': deletedAt})
-        .eq('id', id);
+  Future<void> softDeleteRow(String table, String id, String deletedAt) async {
+    await client.from(table).update({'deleted_at': deletedAt}).eq('id', id);
   }
 
   /// Fetch rows updated after a given timestamp.
