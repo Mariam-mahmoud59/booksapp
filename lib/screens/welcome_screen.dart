@@ -44,7 +44,7 @@ class WelcomeScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      SizedBox(height: 32),
+                      const SizedBox(height: 32),
                       Text(
                         'Story Book Creator',
                         style: TextStyle(
@@ -54,7 +54,7 @@ class WelcomeScreen extends StatelessWidget {
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       Text(
                         'Your personal space for creating, writing, and managing beautiful stories',
                         style: TextStyle(

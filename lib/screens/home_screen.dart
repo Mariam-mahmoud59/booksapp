@@ -283,7 +283,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       color: AppColors.foreground,
                     ),
                   ),
-                  Spacer(),
+                  const Spacer(),
                   Icon(Icons.refresh,
                       size: 16, color: AppColors.mutedForeground),
                 ],
@@ -410,7 +410,7 @@ class _StoryCard extends StatelessWidget {
               children: [
                 if (story.isFavorite)
                   Padding(
-                    padding: EdgeInsets.only(bottom: 4),
+                    padding: const EdgeInsets.only(bottom: 4),
                     child: Icon(
                       Icons.favorite,
                       color: AppColors.accent,

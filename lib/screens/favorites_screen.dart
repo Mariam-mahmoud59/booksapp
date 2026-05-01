@@ -242,7 +242,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                               ),
                               const SizedBox(height: 8),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 40),
+                                padding: const EdgeInsets.symmetric(horizontal: 40),
                                 child: Text(
                                   'Tap the heart icon on any story to save it here for quick access',
                                   style: TextStyle(

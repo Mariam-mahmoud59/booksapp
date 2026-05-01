@@ -665,12 +665,12 @@ class _SyncIndicator extends StatelessWidget {
               ],
             )
           : Row(
-              key: ValueKey('saved'),
+              key: const ValueKey('saved'),
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.check_circle_outline,
                     size: 16, color: AppColors.accent),
-                SizedBox(width: 6),
+                const SizedBox(width: 6),
                 Text(
                   'Saved',
                   style:

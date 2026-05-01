@@ -487,7 +487,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             onPressed: () async {
                               Navigator.pop(ctx);
                               await context.read<AuthProvider>().signOut();
-                              if (mounted) context.go('/welcome');
+                              if (context.mounted) context.go('/welcome');
                             },
                             style: TextButton.styleFrom(
                                 foregroundColor: const Color(0xFFD4183D)),

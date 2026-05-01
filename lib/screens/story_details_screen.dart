@@ -245,7 +245,7 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
                             children: [
                               Icon(Icons.cloud_off,
                                   size: 14, color: AppColors.accent),
-                              SizedBox(width: 4),
+                              const SizedBox(width: 4),
                               Text('Offline',
                                   style: TextStyle(
                                       fontSize: 11, color: AppColors.accent)),

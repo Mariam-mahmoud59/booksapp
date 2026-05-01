@@ -160,9 +160,9 @@ class _StoryCreationScreenState extends State<StoryCreationScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Failed to save changes'),
-            backgroundColor: const Color(0xFFD4183D),
+          const SnackBar(
+            content: Text('Failed to save changes'),
+            backgroundColor: Color(0xFFD4183D),
           ),
         );
       }
@@ -714,12 +714,12 @@ class _SyncIndicator extends StatelessWidget {
               ],
             )
           : Row(
-              key: ValueKey('saved'),
+              key: const ValueKey('saved'),
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.check_circle_outline,
                     size: 16, color: AppColors.accent),
-                SizedBox(width: 6),
+                const SizedBox(width: 6),
                 Text(
                   'Saved',
                   style:

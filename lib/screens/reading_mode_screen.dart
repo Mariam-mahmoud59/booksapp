@@ -143,7 +143,7 @@ class _ReadingModeScreenState extends State<ReadingModeScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [AppColors.background, Color(0xFFEDE0CE)],
+            colors: [AppColors.background, const Color(0xFFEDE0CE)],
           ),
         ),
         child: SafeArea(
@@ -345,7 +345,7 @@ class _ReadingPageView extends StatelessWidget {
           // Content with drop cap for first page
           if (isEmpty)
             Padding(
-              padding: EdgeInsets.only(top: 48),
+              padding: const EdgeInsets.only(top: 48),
               child: Center(
                 child: Text(
                   '(Empty page)',
