@@ -2,9 +2,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
 import '../theme/app_theme.dart';
 import '../models/story.dart';
 import '../providers/story_provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class StoryEditorScreen extends StatefulWidget {
   final String storyId;
@@ -29,6 +32,7 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
   Timer? _debounceTimer;
   int _wordCount = 0;
   bool _showMetaSection = false;
+  final ImagePicker _picker = ImagePicker();
 
   static const List<String> _genres = [
     'Fantasy',
@@ -188,6 +192,17 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
     _story = _story!.copyWith(genre: genre?.toLowerCase());
   }
 
+  Future<void> _pickCoverImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null && _story != null) {
+      final updatedStory = _story!.copyWith(coverImageUrl: pickedFile.path);
+      await _provider.updateStory(updatedStory);
+      setState(() {
+        _story = updatedStory;
+      });
+    }
+  }
+
 
 
   Future<void> _deletePage(String pageId) async {
@@ -330,6 +345,72 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
                             ),
                           ],
                         ),
+                      ),
+                    ),
+
+                    // Cover image editor
+                    const SizedBox(height: 16),
+                    GestureDetector(
+                      onTap: _pickCoverImage,
+                      child: Container(
+                        height: 140,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: AppColors.card,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.border),
+                          image: _story?.coverImageUrl != null &&
+                                  _story!.coverImageUrl!.isNotEmpty
+                              ? DecorationImage(
+                                  image: _story!.coverImageUrl!.startsWith('http')
+                                      ? NetworkImage(_story!.coverImageUrl!)
+                                          as ImageProvider
+                                      : FileImage(File(_story!.coverImageUrl!)),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
+                        ),
+                        child: _story?.coverImageUrl == null ||
+                                _story!.coverImageUrl!.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.add_photo_alternate_outlined,
+                                        color: AppColors.mutedForeground,
+                                        size: 32),
+                                    const SizedBox(height: 8),
+                                    Text('Add Cover Image',
+                                        style: TextStyle(
+                                            color: AppColors.mutedForeground,
+                                            fontSize: 13)),
+                                  ],
+                                ),
+                              )
+                            : Container(
+                                alignment: Alignment.bottomRight,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(16),
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.transparent,
+                                      Colors.black.withOpacity(0.5),
+                                    ],
+                                  ),
+                                ),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.edit,
+                                      color: Colors.white, size: 16),
+                                ),
+                              ),
                       ),
                     ),
 
@@ -577,7 +658,7 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
                         onChanged: _onContentChanged,
                         maxLines: null,
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 16 * context.watch<ThemeProvider>().fontSizeMultiplier,
                           color: AppColors.foreground,
                           height: 1.7,
                         ),

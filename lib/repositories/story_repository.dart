@@ -69,6 +69,7 @@ class StoryRepository {
     required String title,
     String? description,
     String? genre,
+    String? coverImageUrl,
   }) async {
     final now = DateTime.now();
     final id = _uuid.v4();
@@ -79,6 +80,7 @@ class StoryRepository {
       title: title,
       description: description,
       genre: genre,
+      coverImageUrl: coverImageUrl,
       status: 'draft',
       createdAt: now,
       updatedAt: now,

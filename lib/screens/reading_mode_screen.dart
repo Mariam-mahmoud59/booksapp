@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
 import '../theme/app_theme.dart';
 import '../models/story.dart';
 import '../providers/story_provider.dart';
@@ -320,6 +321,8 @@ class _ReadingPageView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+    final multiplier = themeProvider.fontSizeMultiplier;
     final content = page.content.trim();
     final isEmpty = content.isEmpty;
 
@@ -333,7 +336,7 @@ class _ReadingPageView extends StatelessWidget {
             Text(
               page.title!,
               style: TextStyle(
-                fontSize: 24,
+                fontSize: 24 * multiplier,
                 color: AppColors.foreground,
                 fontWeight: FontWeight.w500,
                 letterSpacing: -0.3,
@@ -358,12 +361,12 @@ class _ReadingPageView extends StatelessWidget {
               ),
             )
           else if (pageIndex == 0 && content.length > 1)
-            _buildDropCapContent(content)
+            _buildDropCapContent(content, multiplier)
           else
             Text(
               content,
               style: TextStyle(
-                fontSize: 19,
+                fontSize: 19 * multiplier,
                 color: AppColors.foreground,
                 height: 1.8,
                 letterSpacing: 0.1,
@@ -376,7 +379,7 @@ class _ReadingPageView extends StatelessWidget {
   }
 
   /// Builds first-page content with a decorative initial letter.
-  Widget _buildDropCapContent(String content) {
+  Widget _buildDropCapContent(String content, double multiplier) {
     if (content.isEmpty) return const SizedBox.shrink();
 
     final firstChar = content[0];
@@ -385,7 +388,7 @@ class _ReadingPageView extends StatelessWidget {
     return Text.rich(
       TextSpan(
         style: TextStyle(
-          fontSize: 19,
+          fontSize: 19 * multiplier,
           color: AppColors.foreground,
           height: 1.8,
           letterSpacing: 0.1,
@@ -394,7 +397,7 @@ class _ReadingPageView extends StatelessWidget {
           TextSpan(
             text: firstChar,
             style: TextStyle(
-              fontSize: 34,
+              fontSize: 34 * multiplier,
               color: AppColors.accent,
               fontWeight: FontWeight.w700,
             ),

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/story.dart';
 import '../providers/story_provider.dart';
+import '../providers/auth_provider.dart';
 
 class StoryDetailsScreen extends StatefulWidget {
   final String storyId;
@@ -42,6 +43,12 @@ class _StoryDetailsScreenState extends State<StoryDetailsScreen> {
     if (_story == null) return;
     final newState =
         await context.read<StoryProvider>().toggleFavorite(_story!.id);
+    
+    // Refresh stats for the profile screen
+    if (mounted) {
+      context.read<AuthProvider>().loadStats();
+    }
+    
     setState(() {
       _story = _story!.copyWith(isFavorite: newState);
     });

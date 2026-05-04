@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../providers/auth_provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
@@ -56,7 +57,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     );
 
     // Toggle in provider
-    context.read<StoryProvider>().toggleFavorite(story.id);
+    context.read<StoryProvider>().toggleFavorite(story.id).then((_) {
+      if (mounted) {
+        context.read<AuthProvider>().loadStats();
+      }
+    });
 
     // Show undo snackbar
     ScaffoldMessenger.of(context).clearSnackBars();
@@ -76,6 +81,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           onPressed: () async {
             // Re-favorite
             await context.read<StoryProvider>().toggleFavorite(story.id);
+            if (mounted) {
+              context.read<AuthProvider>().loadStats();
+            }
             _loadFavorites();
           },
         ),

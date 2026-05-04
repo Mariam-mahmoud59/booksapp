@@ -16,13 +16,6 @@ import 'providers/theme_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-    ),
-  );
-
   // Initialize services
   try {
     await SupabaseService().initialize();
@@ -61,6 +54,8 @@ class StoryBookCreatorApp extends StatelessWidget {
           return MaterialApp.router(
             title: 'Story Book Creator',
             theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
             routerConfig: router,
             debugShowCheckedModeBanner: false,
           );

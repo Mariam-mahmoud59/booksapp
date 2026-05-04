@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
 import '../theme/app_theme.dart';
 import '../models/story.dart';
 import '../providers/story_provider.dart';
@@ -103,7 +104,10 @@ class _StoryCreationScreenState extends State<StoryCreationScreen>
     _isCreating = true;
 
     final title = _titleController.text.trim();
-    _createdStory = await _provider.createStory(title: title.isEmpty ? 'Untitled' : title);
+    _createdStory = await _provider.createStory(
+      title: title.isEmpty ? 'Untitled' : title,
+      coverImageUrl: _coverImage?.path,
+    );
 
     // Load the auto-created first page
     final pages = await _provider.getStoryPages(_createdStory!.id);
@@ -623,7 +627,7 @@ class _StoryCreationScreenState extends State<StoryCreationScreen>
                               onChanged: _onContentChanged,
                               maxLines: null,
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 16 * context.watch<ThemeProvider>().fontSizeMultiplier,
                                 color: AppColors.foreground,
                                 height: 1.7,
                               ),

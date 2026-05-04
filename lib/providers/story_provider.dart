@@ -135,11 +135,13 @@ class StoryProvider extends ChangeNotifier {
     required String title,
     String? description,
     String? genre,
+    String? coverImageUrl,
   }) async {
     final story = await _repo.createStory(
       title: title,
       description: description,
       genre: genre,
+      coverImageUrl: coverImageUrl,
     );
     await loadStories();
     return story;

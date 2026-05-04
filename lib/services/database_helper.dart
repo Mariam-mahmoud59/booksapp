@@ -25,9 +25,16 @@ class DatabaseHelper {
     final path = p.join(dbPath, 'storybook.db');
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE profiles ADD COLUMN bio TEXT');
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -37,6 +44,7 @@ class DatabaseHelper {
         id TEXT PRIMARY KEY,
         username TEXT,
         avatar_url TEXT,
+        bio TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         is_synced INTEGER NOT NULL DEFAULT 0
@@ -364,10 +372,12 @@ class DatabaseHelper {
   /// Count favorites for a user.
   Future<int> getFavoriteCount(String userId) async {
     final db = await database;
-    final result = await db.rawQuery(
-      'SELECT COUNT(*) as count FROM favorites WHERE user_id = ? AND deleted_at IS NULL',
-      [userId],
-    );
+    final result = await db.rawQuery('''
+      SELECT COUNT(f.id) as count 
+      FROM favorites f
+      INNER JOIN stories s ON f.story_id = s.id
+      WHERE f.user_id = ? AND f.deleted_at IS NULL AND s.deleted_at IS NULL
+    ''', [userId]);
     return Sqflite.firstIntValue(result) ?? 0;
   }
 

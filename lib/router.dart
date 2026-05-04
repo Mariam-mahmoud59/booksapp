@@ -14,6 +14,8 @@ import 'screens/favorites_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/change_password_screen.dart';
+import 'screens/about_screen.dart';
+import 'screens/privacy_policy_screen.dart';
 import 'widgets/main_scaffold.dart';
 
 final router = GoRouter(
@@ -65,6 +67,14 @@ final router = GoRouter(
     GoRoute(
       path: '/app/settings/password',
       builder: (context, state) => const ChangePasswordScreen(),
+    ),
+    GoRoute(
+      path: '/app/settings/about',
+      builder: (context, state) => const AboutScreen(),
+    ),
+    GoRoute(
+      path: '/app/settings/privacy',
+      builder: (context, state) => const PrivacyPolicyScreen(),
     ),
     ShellRoute(
       builder: (context, state, child) => MainScaffold(child: child),

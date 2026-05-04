@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../providers/auth_provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
@@ -654,9 +655,12 @@ class _StoryListView extends StatelessWidget {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () => context
-                          .read<StoryProvider>()
-                          .toggleFavorite(story.id),
+                      onTap: () async {
+                        await context.read<StoryProvider>().toggleFavorite(story.id);
+                        if (context.mounted) {
+                          context.read<AuthProvider>().loadStats();
+                        }
+                      },
                       child: Padding(
                         padding: const EdgeInsets.all(8),
                         child: Icon(

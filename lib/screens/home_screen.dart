@@ -296,7 +296,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color.fromRGBO(232, 220, 203, 0.5),
+                  color: Theme.of(context).colorScheme.secondary.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
@@ -389,7 +389,7 @@ class _StoryCard extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: const Color.fromRGBO(200, 162, 124, 0.15),
+                            color: AppColors.accent.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(

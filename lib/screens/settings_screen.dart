@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
+import '../widgets/edit_profile_sheet.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -25,6 +26,61 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: AppColors.primary,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
+
+  void _showFontSizePicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) => Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Font Size',
+                style: TextStyle(
+                  fontSize: 20,
+                  color: AppColors.foreground,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              _FontSizeOption(
+                label: 'Small',
+                isSelected: themeProvider.fontSize == AppFontSize.small,
+                onTap: () {
+                  themeProvider.setFontSize(AppFontSize.small);
+                  Navigator.pop(context);
+                },
+              ),
+              _FontSizeOption(
+                label: 'Medium',
+                isSelected: themeProvider.fontSize == AppFontSize.medium,
+                onTap: () {
+                  themeProvider.setFontSize(AppFontSize.medium);
+                  Navigator.pop(context);
+                },
+              ),
+              _FontSizeOption(
+                label: 'Large',
+                isSelected: themeProvider.fontSize == AppFontSize.large,
+                onTap: () {
+                  themeProvider.setFontSize(AppFontSize.large);
+                  Navigator.pop(context);
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );
@@ -80,11 +136,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       },
                     ),
                     const SizedBox(height: 8),
-                    _SettingRow(
-                      icon: Icons.text_fields,
-                      label: 'Font Size',
-                      trailing: const _TrailingText('Medium'),
-                      onTap: _showComingSoon,
+                    Consumer<ThemeProvider>(
+                      builder: (context, themeProvider, child) {
+                        return _SettingRow(
+                          icon: Icons.text_fields,
+                          label: 'Font Size',
+                          trailing: _TrailingText(themeProvider.fontSizeName),
+                          onTap: _showFontSizePicker,
+                        );
+                      },
                     ),
                     const SizedBox(height: 24),
                     const _SectionLabel('SYNC'),
@@ -101,7 +161,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _SettingRow(
                       icon: Icons.person_outline,
                       label: 'Edit Profile',
-                      onTap: _showComingSoon,
+                      onTap: () {
+                        final authProvider = context.read<AuthProvider>();
+                        final username = authProvider.profile?.username ?? 'Writer';
+                        EditProfileSheet.show(context, authProvider, username);
+                      },
                     ),
                     const SizedBox(height: 8),
                     _SettingToggle(
@@ -122,13 +186,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _SettingRow(
                       icon: Icons.info_outline,
                       label: 'About',
-                      onTap: _showComingSoon,
+                      onTap: () => context.push('/app/settings/about'),
                     ),
                     const SizedBox(height: 8),
                     _SettingRow(
                       icon: Icons.privacy_tip_outlined,
                       label: 'Privacy Policy',
-                      onTap: _showComingSoon,
+                      onTap: () => context.push('/app/settings/privacy'),
                     ),
                     const SizedBox(height: 24),
                     SizedBox(
@@ -322,6 +386,51 @@ class _TrailingText extends StatelessWidget {
         const SizedBox(width: 4),
         Icon(Icons.chevron_right, size: 20, color: AppColors.mutedForeground),
       ],
+    );
+  }
+}
+
+class _FontSizeOption extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _FontSizeOption({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.accent.withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? AppColors.accent : AppColors.border,
+          ),
+        ),
+        child: Row(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 16,
+                color: isSelected ? AppColors.accent : AppColors.foreground,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+            const Spacer(),
+            if (isSelected)
+              Icon(Icons.check_circle, color: AppColors.accent, size: 20),
+          ],
+        ),
+      ),
     );
   }
 }

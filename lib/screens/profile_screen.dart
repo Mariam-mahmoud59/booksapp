@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:image_picker/image_picker.dart';
+import '../widgets/edit_profile_sheet.dart';
 import '../theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../providers/story_provider.dart';
@@ -52,163 +53,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
-  Future<void> _editProfile(
-      AuthProvider authProvider, String currentName) async {
-    final TextEditingController nameController =
-        TextEditingController(text: currentName);
-    final TextEditingController bioController = TextEditingController(
-      text: authProvider.profile?.bio ?? '',
-    );
-    String? newImagePath;
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.card,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setStateSheet) => Padding(
-          padding: EdgeInsets.only(
-            left: 24,
-            right: 24,
-            top: 24,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 32,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Handle bar
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.border,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Edit Profile',
-                style: TextStyle(
-                  fontSize: 22,
-                  color: AppColors.foreground,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 24),
-              // Avatar picker
-              Center(
-                child: GestureDetector(
-                  onTap: () async {
-                    final XFile? image =
-                        await _picker.pickImage(source: ImageSource.gallery);
-                    if (image != null) {
-                      setStateSheet(() => newImagePath = image.path);
-                    }
-                  },
-                  child: Stack(
-                    alignment: Alignment.bottomRight,
-                    children: [
-                      Container(
-                        width: 90,
-                        height: 90,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.border,
-                          image: newImagePath != null
-                              ? DecorationImage(
-                                  image: FileImage(File(newImagePath!)),
-                                  fit: BoxFit.cover,
-                                )
-                              : (authProvider.profile?.avatarUrl != null &&
-                                      authProvider
-                                          .profile!.avatarUrl!.isNotEmpty)
-                                  ? DecorationImage(
-                                      image: authProvider
-                                              .profile!.avatarUrl!
-                                              .startsWith('http')
-                                          ? NetworkImage(authProvider
-                                              .profile!.avatarUrl!) as ImageProvider
-                                          : FileImage(File(
-                                              authProvider.profile!.avatarUrl!)),
-                                      fit: BoxFit.cover,
-                                    )
-                                  : null,
-                        ),
-                        child: (newImagePath == null &&
-                                (authProvider.profile?.avatarUrl == null ||
-                                    authProvider.profile!.avatarUrl!.isEmpty))
-                            ? Icon(Icons.camera_alt,
-                                color: AppColors.mutedForeground, size: 28)
-                            : null,
-                      ),
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: AppColors.accent,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.edit,
-                            size: 14, color: Colors.white),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              // Name field
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: 'Name',
-                  labelStyle: TextStyle(color: AppColors.mutedForeground),
-                  prefixIcon:
-                      Icon(Icons.person_outline, color: AppColors.accent),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Bio field
-              TextField(
-                controller: bioController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  labelText: 'Bio',
-                  hintText: 'Tell us a bit about yourself...',
-                  labelStyle: TextStyle(color: AppColors.mutedForeground),
-                  prefixIcon:
-                      Icon(Icons.edit_note_outlined, color: AppColors.accent),
-                  alignLabelWithHint: true,
-                ),
-              ),
-              const SizedBox(height: 28),
-              // Save button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    Navigator.pop(ctx);
-                    await authProvider.updateProfile(
-                      username: nameController.text.trim().isNotEmpty
-                          ? nameController.text.trim()
-                          : currentName,
-                      avatarUrl:
-                          newImagePath ?? authProvider.profile?.avatarUrl,
-                      bio: bioController.text.trim(),
-                    );
-                  },
-                  child: const Text('Save Changes'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  void _showEditProfile(AuthProvider authProvider, String currentName) {
+    EditProfileSheet.show(context, authProvider, currentName);
   }
 
   String _formatWordCount(int count) {
@@ -268,7 +114,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   children: [
                     GestureDetector(
-                      onTap: () => _editProfile(authProvider, username),
+                      onTap: () => _showEditProfile(authProvider, username),
                       child: Stack(
                         alignment: Alignment.bottomRight,
                         children: [
@@ -347,6 +193,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         color: AppColors.mutedForeground,
                       ),
                     ),
+                    if (profile?.bio != null && profile!.bio!.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
+                        child: Text(
+                          profile.bio!,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppColors.foreground.withValues(alpha: 0.9),
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -429,7 +290,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   title: 'Edit Profile',
                   subtitle: 'Update your name, photo & bio',
                   color: AppColors.accent,
-                  onTap: () => _editProfile(authProvider, username),
+                  onTap: () => _showEditProfile(authProvider, username),
                 ),
                 const SizedBox(height: 12),
                 _ActionItem(
